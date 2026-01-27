@@ -1,0 +1,171 @@
+/* Глобални стилове */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: Arial, sans-serif;
+  background: #f2f2f2;
+  color: #222;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Topbar */
+#topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: #1a73e8;
+  color: #fff;
+}
+
+#topbar h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.top-actions input {
+  width: 70px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: none;
+}
+
+.top-actions button {
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: none;
+  background: #fff;
+  color: #1a73e8;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Панели */
+.panel {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin: 20px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  max-width: 520px;
+}
+
+.panel h2 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 18px;
+}
+
+/* Формови редове */
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 12px;
+}
+
+label {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+input[type='number'],
+input[type='text'] {
+  width: 140px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid #cbd5e1;
+  font-size: 15px;
+}
+
+/* Размери + кантове */
+.size-block {
+  display: flex;
+  flex-direction: column;
+  min-width: 150px;
+}
+
+.edge-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.edge-row label {
+  font-weight: normal;
+}
+
+/* Бутони */
+button {
+  background: #0078ff;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+button:hover {
+  background: #005fcc;
+}
+
+#exportPDF {
+  margin-left: 10px;
+}
+
+/* Списък с детайли */
+#partsList {
+  list-style: none;
+  padding-left: 0;
+  margin-top: 10px;
+}
+
+#partsList li {
+  background: #fafafa;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+
+/* Листове */
+#sheetsContainer {
+  border: 1px dashed #cbd5e1;
+  padding: 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+  max-height: 70vh;
+  overflow: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+#sheetsContainer canvas {
+  background: #ffffff;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
+}
+
+/* Footer */
+#footer {
+  padding: 8px 16px;
+  font-size: 12px;
+  color: #64748b;
+  border-top: 1px solid #e2e8f0;
+  background: #f9fafb;
+}
