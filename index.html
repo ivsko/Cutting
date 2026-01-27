@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8">
+  <title>Разкрой плоскости</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+<header id="topbar">
+  <h1>Разкрой плоскости</h1>
+  <div class="top-actions">
+    <label>Фуга (kerf):
+      <input id="kerf" type="number" value="3" step="0.1">
+    </label>
+    <button id="exportPDF">Експорт в PDF</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- ПАНЕЛ: ПЛОСКОСТ -->
+  <section class="panel">
+    <h2>Плоскост</h2>
+
+    <div class="form-row">
+      <label>Цвят / код:
+        <input id="partBoardColor" list="colorList" placeholder="Бял / H3331 / Дъб">
+      </label>
+      <datalist id="colorList"></datalist>
+    </div>
+
+    <div class="form-row">
+      <label>Ширина плоскост (мм):
+        <input id="boardWidth" type="number" placeholder="2800">
+      </label>
+
+      <label>Височина плоскост (мм):
+        <input id="boardHeight" type="number" placeholder="2070">
+      </label>
+    </div>
+  </section>
+
+  <!-- ПАНЕЛ: ДЕТАЙЛИ -->
+  <section class="panel">
+    <h2>Добавяне на детайл</h2>
+
+    <div class="form-row">
+      <label>Ширина (мм): <input id="partWidth" type="number"></label>
+      <label>Височина (мм): <input id="partHeight" type="number"></label>
+      <label>Брой: <input id="partCount" type="number" value="1" min="1"></label>
+    </div>
+
+    <h3>Кантове</h3>
+    <div class="edge-row">
+      <label><input type="checkbox" id="edgeLeft"> Ляв</label>
+      <label><input type="checkbox" id="edgeRight"> Десен</label>
+      <label><input type="checkbox" id="edgeTop"> Горен</label>
+      <label><input type="checkbox" id="edgeBottom"> Долен</label>
+    </div>
+
+    <div class="form-row">
+      <label>Дебелина на канта (мм):
+        <input id="partEdgeThickness" type="number" value="1" min="0" max="3">
+      </label>
+
+      <label>Цвят на канта:
+        <input id="edgeColor" type="text" placeholder="код/цвят">
+      </label>
+
+      <label><input type="checkbox" id="partGrain"> Шарка</label>
+    </div>
+
+    <button id="addPart">Добави детайл</button>
+
+    <h3>Списък с детайли</h3>
+    <ul id="partsList"></ul>
+  </section>
+
+  <!-- ПАНЕЛ: РАЗКРОЙ -->
+  <section class="panel">
+    <h2>Разкрой</h2>
+    <button id="runCutting">Генерирай разкрой</button>
+  </section>
+
+  <!-- ПАНЕЛ: ВИЗУАЛИЗАЦИЯ -->
+  <section class="panel">
+    <h2>Листове</h2>
+    <div id="sheetsContainer"></div>
+  </section>
+
+</main>
+
+<footer id="footer">
+  <span>© Разкрой плоскости</span>
+</footer>
+
+<script src="main.js"></script>
+</body>
+</html>

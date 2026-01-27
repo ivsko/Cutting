@@ -1,0 +1,240 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f5f7fb;
+  color: #222;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+#topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: #1a73e8;
+  color: #fff;
+}
+
+#topbar h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.top-actions label {
+  font-size: 14px;
+}
+
+.top-actions input {
+  width: 70px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: none;
+}
+
+.top-actions button {
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: none;
+  background: #fff;
+  color: #1a73e8;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+main {
+  flex: 1;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* DASHBOARD */
+
+#dashboard {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+#dashboard button {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: none;
+  background: #e3edf9;
+  color: #1a3a6b;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#dashboard button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ПАНЕЛИ */
+
+.panel {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 14px 16px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  max-width: 520px;
+}
+
+.panel h2 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 18px;
+}
+
+.form-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.form-row label {
+  flex: 1;
+  font-size: 14px;
+}
+
+.form-row input {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid #cbd5e1;
+}
+
+.buttons-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.buttons-row button {
+  padding: 7px 14px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.buttons-row button:first-child {
+  background: #1a73e8;
+  color: #fff;
+}
+
+.buttons-row button:last-child {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+/* МАТЕРИАЛИ */
+
+.hidden {
+  display: none;
+}
+
+#materialsView {
+  max-width: 640px;
+}
+
+#materialsView h2 {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.material-card {
+  border: 1px solid #cbd5e1;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.material-card b {
+  font-size: 15px;
+}
+
+.material-card button {
+  margin-top: 6px;
+  margin-right: 6px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.material-card button:nth-child(3) {
+  background: #e3edf9;
+  color: #1a3a6b;
+}
+
+.material-card button:nth-child(4) {
+  background: #facc15;
+  color: #1f2933;
+}
+
+.material-card button:nth-child(5) {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* ЛИСТОВЕ */
+
+#sheetsWrapper {
+  margin-top: 10px;
+}
+
+#sheetsWrapper h2 {
+  margin: 0 0 8px;
+}
+
+#sheetsContainer {
+  border: 1px dashed #cbd5e1;
+  padding: 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+  max-height: 70vh;
+  overflow: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+#sheetsContainer canvas {
+  background: #ffffff;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
+}
+
+/* FOOTER */
+
+#footer {
+  padding: 8px 16px;
+  font-size: 12px;
+  color: #64748b;
+  border-top: 1px solid #e2e8f0;
+  background: #f9fafb;
+}
