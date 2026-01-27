@@ -89,25 +89,7 @@ window.onload = () => {
     updatePartsList();
   };
 
-  function updatePartsList() {
-    partsList.innerHTML = '';
-    parts.forEach((p, i) => {
-      const li = document.createElement('li');
-      const edges = [];
-      if (p.edge.top) edges.push('горе');
-      if (p.edge.bottom) edges.push('долу');
-      if (p.edge.left) edges.push('ляво');
-      if (p.edge.right) edges.push('дясно');
-
-      li.textContent =
-        `${i + 1}. ${p.w} × ${p.h} (${p.boardColor})` +
-        (edges.length
-          ? ` | кант: ${edges.join(', ')} | ${p.edgeColor} ${p.edgeThickness}мм`
-          : '');
-
-      partsList.appendChild(li);
-    });
-  }
+ function updatePartsList() { partsList.innerHTML = ''; parts.forEach((p, i) => { const li = document.createElement('li'); const edges = []; if (p.edge.top) edges.push('горе'); if (p.edge.bottom) edges.push('долу'); if (p.edge.left) edges.push('ляво'); if (p.edge.right) edges.push('дясно'); li.textContent = `${i + 1}. ${p.w} × ${p.h} (${p.boardColor})` + (edges.length ? ` | кант: ${edges.join(', ')} | ${p.edgeColor} ${p.edgeThickness}мм` : ''); // --- БУТОН ЗА ИЗТРИВАНЕ --- const delBtn = document.createElement('button'); delBtn.textContent = '✖'; delBtn.style.marginLeft = '10px'; delBtn.style.background = '#e74c3c'; delBtn.style.color = 'white'; delBtn.style.border = 'none'; delBtn.style.padding = '4px 8px'; delBtn.style.cursor = 'pointer'; delBtn.style.borderRadius = '4px'; delBtn.style.fontSize = '14px'; li.appendChild(delBtn); delBtn.onclick = (e) => { e.stopPropagation(); parts.splice(i, 1); updatePartsList(); }; partsList.appendChild(li); }); } 
 
   // --- MAXRECTS ---
   class MaxRects {
@@ -444,3 +426,4 @@ window.onload = () => {
     setTimeout(() => win.print(), 300);
   };
 };
+
