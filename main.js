@@ -1,735 +1,612 @@
 window.onload = () => {
-  // --- ГЛОБАЛНИ ДАННИ ---
-  function normalizeColor(str) {
-    if (!str) return '';
-    return str
-      .trim()
-      .toUpperCase()
-      .replace(/\s+/g, '')
-      .replace(/-/g, '')
-      .replace(/Н/g, 'H');
-  }
-  let parts = [];
-  let sheets = [];
-  let boardSizes = {};
-  let editingIndex = null;
+  // --- БАЗА ДАННИ (Цени в EUR) ---
+  let boardTypes = [
+    { id: 'b1', name: 'ДЪБ СОНОМА', hex: '#d2b48c', w: 2800, h: 2070, hasGrain: true, price: 61.35 },
+    { id: 'b2', name: 'БЯЛ ГЛАНЦ', hex: '#e2e8f0', w: 2800, h: 2070, hasGrain: false, price: 48.57 }
+  ];
 
-  // --- РЕФЕРЕНЦИИ КЪМ ЧЕКБОКСИТЕ ЗА КАНТ ---
+  let edgeTypes = [
+    { id: 'e1', name: 'ОРЕХ 2mm', hex: '#8b4513', thick: 2, pricePerM: 0.61 },
+    { id: 'e2', name: 'БЯЛ', hex: '#3182ce', thick: 2, pricePerM: 0.46 },
+    { id: 'e0', name: 'БЕЗ КАНТ', hex: '#a0aec0', thick: 0, pricePerM: 0 }
+  ];
+
+  let parts = [];
+  let editingIndex = -1;
+
+  // DOM Елементи
+  const boardsTableBody = document.querySelector('#boardsTable tbody');
+  const edgesTableBody = document.querySelector('#edgesTable tbody');
+  
+  const partBoardSelect = document.getElementById('partBoardSelect');
+  const partEdgeSelect = document.getElementById('partEdgeSelect');
+  const partWidth = document.getElementById('partWidth');
+  const partHeight = document.getElementById('partHeight');
+  const partCount = document.getElementById('partCount');
+
   const edgeTop = document.getElementById('edgeTop');
   const edgeBottom = document.getElementById('edgeBottom');
   const edgeLeft = document.getElementById('edgeLeft');
   const edgeRight = document.getElementById('edgeRight');
 
-  function clearEdgeSelection() {
-    if (edgeTop) edgeTop.checked = false;
-    if (edgeBottom) edgeBottom.checked = false;
-    if (edgeLeft) edgeLeft.checked = false;
-    if (edgeRight) edgeRight.checked = false;
-  }
-
-  // --- ЕЛЕМЕНТИ НА ФОРМАТА ---
-  const partWidth = document.getElementById('partWidth');
-  const partHeight = document.getElementById('partHeight');
-  const partCount = document.getElementById('partCount');
   const partsList = document.getElementById('partsList');
-  const addPartBtn = document.getElementById('addPart');
-
-  const boardColorInput = document.getElementById('partBoardColor');
-  const boardWidthInput = document.getElementById('boardWidth');
-  const boardHeightInput = document.getElementById('boardHeight');
-
   const previewCanvas = document.getElementById('partPreviewCanvas');
+  const addPartBtn = document.getElementById('addPart');
+  const partRotateToggle = document.getElementById('partRotateToggle');
 
-  const cancelBtn = document.createElement('button');
-  cancelBtn.textContent = 'Отказ';
-  cancelBtn.style.marginLeft = '10px';
-  cancelBtn.style.background = '#7f8c8d';
-  cancelBtn.style.color = 'white';
-  cancelBtn.style.border = 'none';
-  cancelBtn.style.padding = '8px 16px';
-  cancelBtn.style.cursor = 'pointer';
-  cancelBtn.style.borderRadius = '4px';
-  cancelBtn.style.display = 'none';
-  if (addPartBtn && addPartBtn.parentNode) {
-    addPartBtn.parentNode.insertBefore(cancelBtn, addPartBtn.nextSibling);
+  // Състояние за фладера на новодобавящата се плоскост
+  let currentNewBoardGrain = true;
+  const boardGrainToggle = document.getElementById('boardGrainToggle');
+  if (boardGrainToggle) {
+    boardGrainToggle.onclick = (e) => {
+      e.preventDefault();
+      currentNewBoardGrain = !currentNewBoardGrain;
+      boardGrainToggle.textContent = currentNewBoardGrain ? '↔ Има фладер (по ширина)' : '🚫 Без фладер';
+      boardGrainToggle.classList.toggle('active', currentNewBoardGrain);
+    };
   }
 
-  function resetFormText() {
-    editingIndex = null;
-    addPartBtn.textContent = 'Добави детайл';
-    cancelBtn.style.display = 'none';
-    clearEdgeSelection();
+  // Управление на въртенето на детайла
+  let currentPartAllowRotate = true;
+  if (partRotateToggle) {
+    partRotateToggle.onclick = (e) => {
+      e.preventDefault();
+      currentPartAllowRotate = !currentPartAllowRotate;
+      partRotateToggle.textContent = currentPartAllowRotate ? '🔓 Разрешено въртене' : '🔒 Забранено въртене';
+      partRotateToggle.classList.toggle('active', currentPartAllowRotate);
+    };
+  }
+
+  // --- ДОБАВЯНЕ НА НОВА ПЛОСКОСТ ---
+  const addBoardBtn = document.getElementById('addBoardDefBtn');
+  if (addBoardBtn) {
+    addBoardBtn.onclick = (e) => {
+      e.preventDefault();
+
+      const nameEl = document.getElementById('boardColorInput');
+      const wEl = document.getElementById('boardWInput');
+      const hEl = document.getElementById('boardHInput');
+      const hexEl = document.getElementById('boardHexInput');
+
+      const name = nameEl ? nameEl.value.trim() : '';
+      const w = wEl ? +wEl.value : 0;
+      const h = hEl ? +hEl.value : 0;
+      const hex = hexEl ? hexEl.value : '#d2b48c';
+
+      if (!name || !w || !h || w <= 0 || h <= 0) {
+        alert('Моля, въведете наименование, ширина и височина на плоскостта!');
+        return;
+      }
+
+      boardTypes.push({
+        id: 'b_' + Date.now(),
+        name,
+        hex,
+        w,
+        h,
+        hasGrain: currentNewBoardGrain,
+        price: 55.00
+      });
+
+      renderMasterData();
+
+      if (nameEl) nameEl.value = '';
+      if (wEl) wEl.value = '2800';
+      if (hEl) hEl.value = '2070';
+    };
+  }
+
+  // --- ДОБАВЯНЕ НА НОВ КАНТ ---
+  const addEdgeBtn = document.getElementById('addEdgeDefBtn');
+  if (addEdgeBtn) {
+    addEdgeBtn.onclick = (e) => {
+      e.preventDefault();
+
+      const nameEl = document.getElementById('edgeColorInput');
+      const thickEl = document.getElementById('edgeThickInput');
+      const hexEl = document.getElementById('edgeHexInput');
+
+      const name = nameEl ? nameEl.value.trim() : '';
+      const thick = thickEl ? +thickEl.value : 0;
+      const hex = hexEl ? hexEl.value : '#8b4513';
+
+      if (!name || thick < 0) {
+        alert('Моля, въведете наименование и дебелина на канта!');
+        return;
+      }
+
+      edgeTypes.push({
+        id: 'e_' + Date.now(),
+        name,
+        hex,
+        thick,
+        pricePerM: 0.50
+      });
+
+      renderMasterData();
+
+      if (nameEl) nameEl.value = '';
+      if (thickEl) thickEl.value = '2';
+    };
+  }
+
+  // Рисуване на фладер (шарка на дърво)
+  function drawWoodGrain(ctx, x, y, w, h, isHorizontal = true, baseColor = '#d2b48c') {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.clip();
+    ctx.fillStyle = baseColor;
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
+    ctx.lineWidth = 1.5;
+
+    const step = 8;
+    if (isHorizontal) {
+      for (let i = y - h; i < y + h + w; i += step) {
+        ctx.beginPath(); ctx.moveTo(x, i); ctx.lineTo(x + w, i + 12); ctx.stroke();
+      }
+    } else {
+      for (let i = x - w; i < x + w + h; i += step) {
+        ctx.beginPath(); ctx.moveTo(i, y); ctx.lineTo(i + 12, y + h); ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  function renderMasterData() {
+    if (boardsTableBody) boardsTableBody.innerHTML = '';
+    if (partBoardSelect) partBoardSelect.innerHTML = '';
+    
+    boardTypes.forEach((b) => {
+      if (boardsTableBody) {
+        boardsTableBody.innerHTML += `
+          <tr>
+            <td><span style="background:${b.hex}; display:inline-block; width:14px; height:14px; border-radius:3px; border:1px solid #999;"></span></td>
+            <td><b>${b.name}</b></td>
+            <td>${b.w}×${b.h} мм</td>
+            <td>${b.hasGrain ? '↔ Фладер' : '🚫 Без фладер'}</td>
+            <td><button class="btn btn-sm" style="background:#e53e3e; color:#fff;" onclick="removeBoard('${b.id}')">✕</button></td>
+          </tr>`;
+      }
+      if (partBoardSelect) {
+        partBoardSelect.innerHTML += `<option value="${b.id}">${b.name} (${b.w}x${b.h})</option>`;
+      }
+    });
+
+    if (edgesTableBody) edgesTableBody.innerHTML = '';
+    if (partEdgeSelect) partEdgeSelect.innerHTML = '';
+    
+    edgeTypes.forEach((e) => {
+      if (edgesTableBody) {
+        edgesTableBody.innerHTML += `
+          <tr>
+            <td><span style="background:${e.hex}; display:inline-block; width:14px; height:14px; border-radius:3px; border:1px solid #999;"></span></td>
+            <td><b>${e.name}</b></td>
+            <td>${e.thick} мм</td>
+            <td><button class="btn btn-sm" style="background:#e53e3e; color:#fff;" onclick="removeEdge('${e.id}')">✕</button></td>
+          </tr>`;
+      }
+      if (partEdgeSelect) {
+        partEdgeSelect.innerHTML += `<option value="${e.id}">${e.name} (${e.thick}мм)</option>`;
+      }
+    });
+
     updatePartPreview();
   }
 
-  cancelBtn.onclick = () => {
-    resetFormText();
-  };
+  window.removeBoard = (id) => { boardTypes = boardTypes.filter(b => b.id !== id); renderMasterData(); };
+  window.removeEdge = (id) => { edgeTypes = edgeTypes.filter(e => e.id !== id); renderMasterData(); };
 
-  function addColorToList(color) {
-    const list = document.getElementById('colorList');
-    if (list && ![...list.options].some((o) => o.value === color)) {
-      const opt = document.createElement('option');
-      opt.value = color;
-      list.appendChild(opt);
-    }
-  }
-
-  boardColorInput.addEventListener('input', () => {
-    const raw = boardColorInput.value;
-    const color = normalizeColor(raw);
-    boardColorInput.value = color;
-    if (boardSizes[color]) {
-      boardWidthInput.value = boardSizes[color].width;
-      boardHeightInput.value = boardSizes[color].height;
-    }
-  });
-
-  // --- МИНИ ПРЕГЛЕД (PREVIEW CANVAS) В РЕАЛНО ВРЕМЕ ---
   function updatePartPreview() {
     if (!previewCanvas) return;
     const ctx = previewCanvas.getContext('2d');
     const cW = previewCanvas.width;
     const cH = previewCanvas.height;
-
     ctx.clearRect(0, 0, cW, cH);
 
     const w = +partWidth.value || 0;
     const h = +partHeight.value || 0;
+    if (!w || !h) return;
 
-    if (!w || !h) {
-      ctx.fillStyle = '#999';
-      ctx.font = '14px Roboto, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('Въведете размери', cW / 2, cH / 2);
-      return;
-    }
+    const boardObj = boardTypes.find(b => b.id === partBoardSelect.value) || boardTypes[0];
+    const edgeObj = edgeTypes.find(e => e.id === partEdgeSelect.value) || edgeTypes[0];
+
+    if (!boardObj) return;
 
     const margin = 20;
-    const maxDrawW = cW - margin * 2;
-    const maxDrawH = cH - margin * 2;
-    const scale = Math.min(maxDrawW / w, maxDrawH / h);
-
+    const scale = Math.min((cW - margin * 2) / w, (cH - margin * 2) / h);
     const drawW = w * scale;
     const drawH = h * scale;
-    const startX = (cW - drawW) / 2;
-    const startY = (cH - drawH) / 2;
+    const x = (cW - drawW) / 2;
+    const y = (cH - drawH) / 2;
 
-    // Фон на детайла
-    ctx.fillStyle = '#eaf2f8';
-    ctx.fillRect(startX, startY, drawW, drawH);
-
-    // Фладер
-    const boardHasGrain = document.getElementById('boardHasGrain')
-      ? document.getElementById('boardHasGrain').checked
-      : true;
-
-    if (boardHasGrain) {
-      drawWoodGrain(ctx, startX, startY, drawW, drawH, false, 0.2);
+    if (boardObj.hasGrain) {
+      drawWoodGrain(ctx, x, y, drawW, drawH, true, boardObj.hex);
+    } else {
+      ctx.fillStyle = boardObj.hex;
+      ctx.fillRect(x, y, drawW, drawH);
     }
 
-    // Контур
-    const isFixedGrain = document.getElementById('partGrain')
-      ? document.getElementById('partGrain').checked
-      : false;
-    ctx.strokeStyle = boardHasGrain && isFixedGrain ? '#0f4c81' : '#1a73e8';
-    ctx.lineWidth = boardHasGrain && isFixedGrain ? 3 : 2;
-    ctx.strokeRect(startX, startY, drawW, drawH);
+    ctx.strokeStyle = '#2d3748'; ctx.lineWidth = 1.5;
+    ctx.strokeRect(x, y, drawW, drawH);
 
-    // Рисуване на кантовете
-    const edgeThicknessVisual = Math.max(3, Math.min(8, scale * (+document.getElementById('partEdgeThickness').value || 1) * 3));
-    const edgeColor = document.getElementById('edgeColor').value || '#e74c3c';
-    ctx.fillStyle = edgeColor !== 'Неуточнен' ? edgeColor : '#e74c3c';
-
-    if (edgeTop && edgeTop.checked) {
-      ctx.fillRect(startX, startY, drawW, edgeThicknessVisual);
-    }
-    if (edgeBottom && edgeBottom.checked) {
-      ctx.fillRect(startX, startY + drawH - edgeThicknessVisual, drawW, edgeThicknessVisual);
-    }
-    if (edgeLeft && edgeLeft.checked) {
-      ctx.fillRect(startX, startY, edgeThicknessVisual, drawH);
-    }
-    if (edgeRight && edgeRight.checked) {
-      ctx.fillRect(startX + drawW - edgeThicknessVisual, startY, edgeThicknessVisual, drawH);
+    if (edgeObj && edgeObj.thick > 0) {
+      ctx.fillStyle = edgeObj.hex;
+      // Запазено отстояние, но тънки линии на канта (напр. фиксирана тънка дебелина или тънък инсет)
+      const offset = 10; // запазваме отстоянието
+      const lineThick = 3; // тънка линия
+      if (edgeTop.checked) ctx.fillRect(x + offset, y, drawW - (offset * 2), lineThick);
+      if (edgeBottom.checked) ctx.fillRect(x + offset, y + drawH - lineThick, drawW - (offset * 2), lineThick);
+      if (edgeLeft.checked) ctx.fillRect(x, y + offset, lineThick, drawH - (offset * 2));
+      if (edgeRight.checked) ctx.fillRect(x + drawW - lineThick, y + offset, lineThick, drawH - (offset * 2));
     }
 
-    // Размери и иконка за фладер
-    ctx.fillStyle = '#000000';
-    ctx.font = '12px Roboto, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    
-    let label = `${w}×${h}`;
-    if (boardHasGrain && isFixedGrain) label += ' 🔒';
-    
-    ctx.fillText(label, cW / 2, cH / 2);
+    ctx.fillStyle = '#000';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(`${w} × ${h} мм`, cW / 2, cH / 2);
   }
 
-  // Закачане на събития за актуализация на прегледа в реално време
-  [
-    partWidth,
-    partHeight,
-    document.getElementById('partEdgeThickness'),
-    document.getElementById('edgeColor'),
-    document.getElementById('partGrain'),
-    document.getElementById('boardHasGrain'),
-    edgeTop,
-    edgeBottom,
-    edgeLeft,
-    edgeRight
-  ].forEach((el) => {
+  [partWidth, partHeight, partBoardSelect, partEdgeSelect, edgeTop, edgeBottom, edgeLeft, edgeRight].forEach(el => {
     if (el) {
       el.addEventListener('input', updatePartPreview);
       el.addEventListener('change', updatePartPreview);
     }
   });
 
-  addPartBtn.onclick = () => {
-    const w = +partWidth.value;
-    const h = +partHeight.value;
-    const count = +partCount.value || 1;
+  // --- ДОБАВЯНЕ И РЕДАКЦИЯ НА ДЕТАЙЛИ ---
+  if (addPartBtn) {
+    addPartBtn.onclick = (e) => {
+      e.preventDefault();
+      const w = +partWidth.value;
+      const h = +partHeight.value;
+      const count = +partCount.value || 1;
 
-    if (!w || !h) return;
+      if (!w || !h || w <= 0 || h <= 0) { alert('Въведете валидни размери!'); return; }
 
-    const boardColor = normalizeColor(boardColorInput.value) || 'НЕУТОЧНЕН';
-    addColorToList(boardColor);
-    const edgeColor = document.getElementById('edgeColor').value || 'Неуточнен';
-    const edgeThickness = +document.getElementById('partEdgeThickness').value || 0;
-    const grain = document.getElementById('partGrain').checked;
+      const boardObj = boardTypes.find(b => b.id === partBoardSelect.value);
+      const edgeObj = edgeTypes.find(e => e.id === partEdgeSelect.value) || { id: 'e0', name: 'БЕЗ КАНТ', hex: '#a0aec0', thick: 0 };
 
-    boardSizes[boardColor] = {
-      width: +boardWidthInput.value || 2800,
-      height: +boardHeightInput.value || 2070,
-    };
+      if (!boardObj) { alert('Изберете плоскост!'); return; }
 
-    const isTop = edgeTop ? edgeTop.checked : false;
-    const isBottom = edgeBottom ? edgeBottom.checked : false;
-    const isLeft = edgeLeft ? edgeLeft.checked : false;
-    const isRight = edgeRight ? edgeRight.checked : false;
+      const item = {
+        w, h,
+        boardId: boardObj.id, boardName: boardObj.name, boardHex: boardObj.hex,
+        edgeId: edgeObj.id, edgeName: edgeObj.name, edgeHex: edgeObj.hex, edgeThick: edgeObj.thick,
+        allowRotate: currentPartAllowRotate,
+        edges: { top: edgeTop.checked, bottom: edgeBottom.checked, left: edgeLeft.checked, right: edgeRight.checked }
+      };
 
-    const updatedPart = {
-      w,
-      h,
-      grain,
-      boardColor,
-      edgeColor,
-      edgeThickness,
-      edge: {
-        top: isTop,
-        bottom: isBottom,
-        left: isLeft,
-        right: isRight,
-      },
-    };
-
-    if (editingIndex !== null) {
-      parts[editingIndex] = updatedPart;
-      resetFormText();
-    } else {
-      for (let i = 0; i < count; i++) {
-        parts.push({ ...updatedPart, edge: { ...updatedPart.edge } });
+      if (editingIndex >= 0) {
+        parts[editingIndex] = item;
+        editingIndex = -1;
+        addPartBtn.textContent = '➕ Добави детайл в списъка';
+        addPartBtn.style.background = '';
+      } else {
+        for (let i = 0; i < count; i++) parts.push(JSON.parse(JSON.stringify(item)));
       }
-    }
-
-    clearEdgeSelection();
-    updatePartsList();
-    updatePartPreview();
-  };
+      updatePartsList();
+    };
+  }
 
   function updatePartsList() {
+    if (!partsList) return;
     partsList.innerHTML = '';
     parts.forEach((p, i) => {
+      const eArr = [];
+      const tThick = p.edges.top ? p.edgeThick : 0;
+      const bThick = p.edges.bottom ? p.edgeThick : 0;
+      const lThick = p.edges.left ? p.edgeThick : 0;
+      const rThick = p.edges.right ? p.edgeThick : 0;
+
+      if (p.edges.top) eArr.push(`${p.w - lThick - rThick} мм ✓`); // Чист размер на съответната страна
+      if (p.edges.bottom) eArr.push(`${p.w - lThick - rThick} мм ✓`);
+      if (p.edges.left) eArr.push(`${p.h - tThick - bThick} мм ✓`);
+      if (p.edges.right) eArr.push(`${p.h - tThick - bThick} мм ✓`);
+
       const li = document.createElement('li');
-      const edges = [];
-      if (p.edge.top) edges.push('Ширина 1 (горе)');
-      if (p.edge.bottom) edges.push('Ширина 2 (долу)');
-      if (p.edge.left) edges.push('Височина 1 (ляво)');
-      if (p.edge.right) edges.push('Височина 2 (дясно)');
-
-      li.textContent =
-        `${i + 1}. W:${p.w} × H:${p.h} (${p.boardColor})` +
-        (p.grain ? ' 🔒 [Фиксиран фладер]' : '') +
-        (edges.length
-          ? ` | кант: ${edges.join(', ')} | ${p.edgeColor} ${p.edgeThickness}мм`
-          : ' | без кант');
-
-      const editBtn = document.createElement('button');
-      editBtn.textContent = '✏️';
-      editBtn.style.marginLeft = '10px';
-      editBtn.style.background = '#f39c12';
-      editBtn.style.color = 'white';
-      editBtn.style.border = 'none';
-      editBtn.style.padding = '4px 8px';
-      editBtn.style.cursor = 'pointer';
-      editBtn.style.borderRadius = '4px';
-
-      editBtn.onclick = (e) => {
-        e.stopPropagation();
-        editingIndex = i;
-
-        partWidth.value = p.w;
-        partHeight.value = p.h;
-        partCount.value = 1;
-        boardColorInput.value = p.boardColor;
-        document.getElementById('edgeColor').value = p.edgeColor;
-        document.getElementById('partEdgeThickness').value = p.edgeThickness;
-        document.getElementById('partGrain').checked = p.grain;
-
-        if (boardSizes[p.boardColor]) {
-          boardWidthInput.value = boardSizes[p.boardColor].width;
-          boardHeightInput.value = boardSizes[p.boardColor].height;
-        }
-
-        if (edgeTop) edgeTop.checked = !!p.edge.top;
-        if (edgeBottom) edgeBottom.checked = !!p.edge.bottom;
-        if (edgeLeft) edgeLeft.checked = !!p.edge.left;
-        if (edgeRight) edgeRight.checked = !!p.edge.right;
-
-        addPartBtn.textContent = 'Запази промените';
-        cancelBtn.style.display = 'inline-block';
-        updatePartPreview();
-      };
-
-      const delBtn = document.createElement('button');
-      delBtn.textContent = '✖';
-      delBtn.style.marginLeft = '5px';
-      delBtn.style.background = '#e74c3c';
-      delBtn.style.color = 'white';
-      delBtn.style.border = 'none';
-      delBtn.style.padding = '4px 8px';
-      delBtn.style.cursor = 'pointer';
-      delBtn.style.borderRadius = '4px';
-
-      delBtn.onclick = (e) => {
-        e.stopPropagation();
-        parts.splice(i, 1);
-        if (editingIndex === i) resetFormText();
-        updatePartsList();
-      };
-
-      li.appendChild(editBtn);
-      li.appendChild(delBtn);
+      li.innerHTML = `
+        <div>
+          <b>#${i + 1}</b>: ${p.w} × ${p.h} мм | 
+          Плоскост: <span style="display:inline-block; width:12px; height:12px; background:${p.boardHex}; border-radius:2px; vertical-align:middle;"></span> <b>${p.boardName}</b> | 
+          Кант: <span style="display:inline-block; width:12px; height:12px; background:${p.edgeHex}; border-radius:2px; vertical-align:middle;"></span> <b>${p.edgeName}</b> 
+          ${eArr.length ? `<span style="color:#2b6cb0; font-weight:bold; margin-left:6px;">(Кантове: ${eArr.join(', ')})</span>` : '<i>(Без кант)</i>'}
+          ${!p.allowRotate ? ' 🔒' : ''}
+        </div>
+        <div>
+          <button class="btn btn-sm" style="background:#3182ce; color:#fff; margin-right:4px;" onclick="editPart(${i})">✏️ Редакция</button>
+          <button class="btn btn-sm" style="background:#e53e3e; color:#fff;" onclick="removePart(${i})">✖ Изтрий</button>
+        </div>
+      `;
       partsList.appendChild(li);
     });
   }
 
-  // --- MAXRECTS ---
-  class MaxRects {
-    constructor(width, height) {
-      this.freeRects = [{ x: 0, y: 0, w: width, h: height }];
+  window.editPart = (i) => {
+    const p = parts[i];
+    editingIndex = i;
+
+    partWidth.value = p.w;
+    partHeight.value = p.h;
+    partCount.value = 1;
+
+    if (partBoardSelect) partBoardSelect.value = p.boardId;
+    if (partEdgeSelect) partEdgeSelect.value = p.edgeId;
+
+    edgeTop.checked = p.edges.top;
+    edgeBottom.checked = p.edges.bottom;
+    edgeLeft.checked = p.edges.left;
+    edgeRight.checked = p.edges.right;
+
+    currentPartAllowRotate = p.allowRotate;
+    if (partRotateToggle) {
+      partRotateToggle.textContent = currentPartAllowRotate ? '🔓 Разрешено въртене' : '🔒 Забранено въртене';
+      partRotateToggle.classList.toggle('active', currentPartAllowRotate);
+    }
+
+    addPartBtn.textContent = '💾 Запази промените';
+    addPartBtn.style.background = '#e53e3e';
+    updatePartPreview();
+  };
+
+  window.removePart = (i) => { 
+    if (editingIndex === i) {
+      editingIndex = -1;
+      addPartBtn.textContent = '➕ Добави детайл в списъка';
+      addPartBtn.style.background = '';
+    }
+    parts.splice(i, 1); 
+    updatePartsList(); 
+  };
+
+  // --- АЛГОРИТЪМ ЗА РАЗКРОЙ ---
+  class AutoShelfPacker {
+    constructor(boardW, boardH, kerf) {
+      this.boardW = boardW;
+      this.boardH = boardH;
+      this.kerf = Math.max(kerf, 8); 
+      this.shelves = [];
+      this.currentY = 0;
     }
 
     insert(w, h) {
-      let best = null;
-      let bestIndex = -1;
+      const itemW = w + this.kerf;
+      const itemH = h + this.kerf;
 
-      for (let i = 0; i < this.freeRects.length; i++) {
-        const r = this.freeRects[i];
-        if (w <= r.w && h <= r.h) {
-          const score = (r.w - w) * (r.h - h);
-          if (!best || score < best.score) {
-            best = { x: r.x, y: r.y, w, h, score };
-            bestIndex = i;
-          }
+      for (let shelf of this.shelves) {
+        if (shelf.currentX + itemW <= this.boardW && itemH <= shelf.height) {
+          const pos = { x: shelf.currentX, y: shelf.y, w, h };
+          shelf.currentX += itemW;
+          return pos;
         }
       }
 
-      if (!best) return null;
-      this.splitFreeRect(bestIndex, best);
-      return best;
-    }
-
-    splitFreeRect(index, placed) {
-      const r = this.freeRects[index];
-      this.freeRects.splice(index, 1);
-
-      if (placed.y > r.y)
-        this.freeRects.push({ x: r.x, y: r.y, w: r.w, h: placed.y - r.y });
-
-      if (placed.y + placed.h < r.y + r.h)
-        this.freeRects.push({
-          x: r.x,
-          y: placed.y + placed.h,
-          w: r.w,
-          h: r.y + r.h - (placed.y + placed.h),
-        });
-
-      if (placed.x > r.x)
-        this.freeRects.push({ x: r.x, y: r.y, w: placed.x - r.x, h: r.h });
-
-      if (placed.x + placed.w < r.x + r.w)
-        this.freeRects.push({
-          x: placed.x + placed.w,
-          y: r.y,
-          w: r.x + r.w - (placed.x + placed.w),
-          h: r.h,
-        });
-
-      this.pruneFreeList();
-    }
-
-    pruneFreeList() {
-      for (let i = 0; i < this.freeRects.length; i++) {
-        for (let j = i + 1; j < this.freeRects.length; j++) {
-          const a = this.freeRects[i];
-          const b = this.freeRects[j];
-
-          if (this.isContainedIn(a, b)) {
-            this.freeRects.splice(i, 1);
-            i--;
-            break;
-          }
-          if (this.isContainedIn(b, a)) {
-            this.freeRects.splice(j, 1);
-            j--;
-          }
-        }
+      if (this.currentY + itemH <= this.boardH && itemW <= this.boardW) {
+        const newShelf = { y: this.currentY, height: itemH, currentX: itemW };
+        this.shelves.push(newShelf);
+        const pos = { x: 0, y: this.currentY, w, h };
+        this.currentY += itemH;
+        return pos;
       }
-    }
-
-    isContainedIn(a, b) {
-      return (
-        a.x >= b.x &&
-        a.y >= b.y &&
-        a.x + a.w <= b.x + b.w &&
-        a.y + a.h <= b.y + b.h
-      );
+      return null;
     }
   }
 
-  // --- РИСУВАНЕ НА ФЛАДЕР / ДЪРВЕСНИ ИЗВИВКИ ---
-  function drawWoodGrain(ctx, x, y, w, h, isVertical, opacity = 0.12) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(x, y, w, h);
-    ctx.clip();
+  const runBtn = document.getElementById('runCutting');
+  if (runBtn) {
+    runBtn.onclick = (e) => {
+      e.preventDefault();
+      const container = document.getElementById('sheetsContainer');
+      container.innerHTML = '';
+      if (parts.length === 0) { alert('Моля, добавете детайли!'); return; }
 
-    ctx.strokeStyle = `rgba(100, 70, 30, ${opacity})`;
-    ctx.lineWidth = 2;
-
-    const step = 25;
-    if (!isVertical) {
-      for (let pos = y + 10; pos < y + h; pos += step) {
-        ctx.beginPath();
-        ctx.moveTo(x, pos);
-        ctx.bezierCurveTo(
-          x + w * 0.3, pos + 12,
-          x + w * 0.7, pos - 12,
-          x + w, pos
-        );
-        ctx.stroke();
-      }
-    } else {
-      for (let pos = x + 10; pos < x + w; pos += step) {
-        ctx.beginPath();
-        ctx.moveTo(pos, y);
-        ctx.bezierCurveTo(
-          pos + 12, y + h * 0.3,
-          pos - 12, y + h * 0.7,
-          pos, y + h
-        );
-        ctx.stroke();
-      }
-    }
-    ctx.restore();
-  }
-
-  // --- СЪЗДАВАНЕ НА ПЛОСКОСТ ---
-  function addSheet(width, height, color) {
-    const scale = Math.min(1200 / width, 800 / height);
-    const canvas = document.createElement('canvas');
-    canvas.width = width * scale;
-    canvas.height = height * scale;
-
-    const ctx = canvas.getContext('2d');
-    ctx.scale(scale, scale);
-
-    document.getElementById('sheetsContainer').appendChild(canvas);
-
-    const sheet = { width, height, canvas, ctx, parts: [], color };
-    sheets.push(sheet);
-
-    ctx.fillStyle = '#f4f1ea';
-    ctx.fillRect(0, 0, width, height);
-
-    const boardHasGrain = document.getElementById('boardHasGrain')
-      ? document.getElementById('boardHasGrain').checked
-      : true;
-
-    if (boardHasGrain) {
-      drawWoodGrain(ctx, 0, 0, width, height, false, 0.08);
-    }
-
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 4;
-    ctx.strokeRect(0, 0, width, height);
-
-    return sheet;
-  }
-
-  // --- РИСУВАНЕ НА КАНТОВЕ ВЪРХУ ПЛОСКОСТТА ---
-  function drawEdges(ctx, p, placed) {
-    const edgeThicknessVisual = 8;
-    const baseOffset = 12;
-
-    const x = placed.x + baseOffset;
-    const y = placed.y + baseOffset;
-    const w = placed.w - baseOffset * 2;
-    const h = placed.h - baseOffset * 2;
-
-    ctx.fillStyle =
-      p.edgeColor && p.edgeColor !== 'Неуточнен' ? p.edgeColor : '#e74c3c';
-
-    if (p.edge && p.edge.top) {
-      ctx.fillRect(x, y, w, edgeThicknessVisual);
-    }
-    if (p.edge && p.edge.bottom) {
-      ctx.fillRect(x, y + h - edgeThicknessVisual, w, edgeThicknessVisual);
-    }
-    if (p.edge && p.edge.left) {
-      ctx.fillRect(x, y, edgeThicknessVisual, h);
-    }
-    if (p.edge && p.edge.right) {
-      ctx.fillRect(x + w - edgeThicknessVisual, y, edgeThicknessVisual, h);
-    }
-  }
-
-  // --- ПЛОЩАДКА ЗА ДЕТАЙЛИ ---
-  function placePartsOnSheet(sheet, partsToPlace) {
-    const ctx = sheet.ctx;
-    const kerf = +(document.getElementById('kerf').value || 0);
-
-    const boardHasGrain = document.getElementById('boardHasGrain')
-      ? document.getElementById('boardHasGrain').checked
-      : true;
-
-    const maxRects = new MaxRects(sheet.width, sheet.height);
-    const remaining = [];
-
-    for (let p of partsToPlace) {
-      let currentPart = { ...p, edge: { ...p.edge } };
-
-      let partW = currentPart.w;
-      let partH = currentPart.h;
-
-      if (currentPart.edge.left) partW -= currentPart.edgeThickness;
-      if (currentPart.edge.right) partW -= currentPart.edgeThickness;
-      if (currentPart.edge.top) partH -= currentPart.edgeThickness;
-      if (currentPart.edge.bottom) partH -= currentPart.edgeThickness;
-
-      let placed = maxRects.insert(partW + kerf, partH + kerf);
-
-      const allowRotation = !boardHasGrain || !currentPart.grain;
-
-      if (!placed && allowRotation) {
-        placed = maxRects.insert(partH + kerf, partW + kerf);
-        if (placed) {
-          [partW, partH] = [partH, partW];
-          currentPart.rotated = true;
-
-          currentPart.edge = {
-            top: p.edge.left,
-            right: p.edge.top,
-            bottom: p.edge.right,
-            left: p.edge.bottom,
-          };
-        }
-      }
-
-      if (!placed) {
-        remaining.push(p);
-        continue;
-      }
-
-      // 1. Заден фон
-      ctx.fillStyle = '#eaf2f8';
-      ctx.fillRect(placed.x, placed.y, partW, partH);
-
-      // 2. Чертане на фладер САМО АКО плоскостта има такъв
-      if (boardHasGrain) {
-        drawWoodGrain(ctx, placed.x, placed.y, partW, partH, currentPart.rotated, 0.15);
-      }
-
-      // 3. Контур
-      ctx.strokeStyle = (boardHasGrain && currentPart.grain) ? '#0f4c81' : '#1a73e8';
-      ctx.lineWidth = (boardHasGrain && currentPart.grain) ? 3 : 2;
-      ctx.strokeRect(placed.x, placed.y, partW, partH);
-
-      // 4. Текст
-      const textMarginX = 12 + 8 + 10;
-      const textMarginY = 12 + 8 + 35;
-
-      ctx.fillStyle = '#000000';
-      ctx.font = 'bold 36px Roboto, sans-serif';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'alphabetic';
-
-      let statusTag = '';
-      if (boardHasGrain && currentPart.grain) {
-        statusTag = ' 🔒 (Фиксиран)';
-      } else if (currentPart.rotated) {
-        statusTag = ' ↻';
-      }
-
-      const labelText = `${partW} × ${partH}${statusTag}`;
-      ctx.fillText(labelText, placed.x + textMarginX, placed.y + textMarginY);
-
-      // 5. Кантове
-      drawEdges(ctx, currentPart, {
-        x: placed.x,
-        y: placed.y,
-        w: partW,
-        h: partH,
+      const kerf = +document.getElementById('kerf').value || 0;
+      const grouped = {};
+      parts.forEach(p => {
+        if (!grouped[p.boardId]) grouped[p.boardId] = [];
+        grouped[p.boardId].push(p);
       });
 
-      currentPart.x = placed.x;
-      currentPart.y = placed.y;
-      currentPart.realW = partW;
-      currentPart.realH = partH;
+      let sheetGlobalIndex = 1;
+      let totalCostProject = 0;
+      const boardCountSummary = {};
+      const edgeMetersSummary = {};
 
-      sheet.parts.push(currentPart);
-    }
+      for (let bId in grouped) {
+        let list = [...grouped[bId]];
+        const board = boardTypes.find(b => b.id === bId);
+        if (!board) continue;
+        list.sort((a, b) => b.h - a.h || b.w - a.w);
 
-    return remaining;
-  }
+        const fullSheetAreaM2 = (board.w * board.h) / 1000000;
 
-  // --- РАЗКРОЙ ---
-  document.getElementById('runCutting').onclick = () => {
-    sheets = [];
-    document.getElementById('sheetsContainer').innerHTML = '';
+        while (list.length > 0) {
+          const packer = new AutoShelfPacker(board.w, board.h, kerf);
+          const sheetBlock = document.createElement('div');
+          sheetBlock.className = 'sheet-block';
 
-    const grouped = {};
+          const canvasWrapper = document.createElement('div');
+          canvasWrapper.className = 'sheet-canvas-wrapper';
 
-    parts.forEach((p) => {
-      const color = normalizeColor(p.boardColor);
-      if (!grouped[color]) grouped[color] = [];
-      grouped[color].push(p);
-    });
+          const canvas = document.createElement('canvas');
+          const scale = Math.min(950 / board.w, 550 / board.h);
+          canvas.width = Math.round(board.w * scale);
+          canvas.height = Math.round(board.h * scale);
 
-    for (const color in grouped) {
-      let list = grouped[color];
-      list.sort((a, b) => b.w * b.h - a.w * a.h);
+          const ctx = canvas.getContext('2d');
+          if (board.hasGrain) {
+            drawWoodGrain(ctx, 0, 0, canvas.width, canvas.height, true, board.hex);
+          } else {
+            ctx.fillStyle = board.hex || '#e2e8f0'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+          }
 
-      let remaining = [...list];
+          const placedParts = [];
+          const remaining = [];
+          let usedAreaM2 = 0;
 
-      const w = boardSizes[color] ? boardSizes[color].width : 2800;
-      const h = boardSizes[color] ? boardSizes[color].height : 2070;
+          for (let p of list) {
+            let netW = p.w - (p.edges.left ? p.edgeThick : 0) - (p.edges.right ? p.edgeThick : 0);
+            let netH = p.h - (p.edges.top ? p.edgeThick : 0) - (p.edges.bottom ? p.edgeThick : 0);
 
-      while (remaining.length > 0) {
-        const newSheet = addSheet(w, h, color);
-        remaining = placePartsOnSheet(newSheet, remaining);
-      }
-    }
-  };
+            let rot = false;
+            let node = packer.insert(netW, netH);
 
-  // --- СПЕЦИФИКАЦИЯ НА КАНТ ---
-  function calculateEdgeSpec() {
-    const spec = {};
+            if (!node && p.allowRotate && !board.hasGrain) {
+              node = packer.insert(netH, netW);
+              if (node) { rot = true; [netW, netH] = [netH, netW]; }
+            }
 
-    parts.forEach((p) => {
-      const hasAnyEdge =
-        p.edge.top || p.edge.bottom || p.edge.left || p.edge.right;
-      if (!hasAnyEdge) return;
+            if (node) {
+              const rx = node.x * scale, ry = node.y * scale, rw = netW * scale, rh = netH * scale;
+              ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.fillRect(rx, ry, rw, rh);
 
-      const key = `${p.edgeColor} / ${p.edgeThickness}мм`;
-      if (!spec[key]) spec[key] = 0;
+              if (board.hasGrain) drawWoodGrain(ctx, rx, ry, rw, rh, !rot, board.hex);
+              else { ctx.fillStyle = board.hex; ctx.fillRect(rx, ry, rw, rh); }
 
-      if (p.edge.top) spec[key] += p.w / 1000;
-      if (p.edge.bottom) spec[key] += p.w / 1000;
-      if (p.edge.left) spec[key] += p.h / 1000;
-      if (p.edge.right) spec[key] += p.h / 1000;
-    });
+              ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.strokeRect(rx, ry, rw, rh);
 
-    return spec;
-  }
+              if (p.edgeThick > 0) {
+                ctx.fillStyle = p.edgeHex;
+                // Тънки линии на канта при запазено отстояние в разкройните карти
+                const offset = 8;
+                const lineThick = 2.5;
+                if (p.edges.top) ctx.fillRect(rx + offset, ry, rw - (offset * 2), lineThick);
+                if (p.edges.bottom) ctx.fillRect(rx + offset, ry + rh - lineThick, rw - (offset * 2), lineThick);
+                if (p.edges.left) ctx.fillRect(rx, ry + offset, lineThick, rh - (offset * 2));
+                if (p.edges.right) ctx.fillRect(rx + rw - lineThick, ry + offset, lineThick, rh - (offset * 2));
+              }
 
-  // --- PDF ЕКСПОРТ ---
-  document.getElementById('exportPDF').onclick = () => {
-    const win = window.open('', '_blank');
-    let html = '<html><body>';
+              ctx.fillStyle = '#000'; ctx.font = 'bold 11px sans-serif';
+              ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+              ctx.fillText(`${netW}×${netH}`, rx + rw / 2, ry + rh / 2);
 
-    sheets.forEach((sheet, i) => {
-      let sheetArea = (sheet.width * sheet.height) / 1_000_000;
-      let usedArea = 0;
+              usedAreaM2 += (netW * netH) / 1000000;
 
-      sheet.parts.forEach((p) => {
-        usedArea += (p.realW * p.realH) / 1_000_000;
-      });
+              let edgeMm = (p.edges.top ? p.w : 0) + (p.edges.bottom ? p.w : 0) + (p.edges.left ? p.h : 0) + (p.edges.right ? p.h : 0);
+              const edgeM = edgeMm / 1000;
+              edgeMetersSummary[p.edgeName] = (edgeMetersSummary[p.edgeName] || 0) + edgeM;
 
-      let waste = sheetArea - usedArea;
-      let usagePercent = (usedArea / sheetArea) * 100;
+              placedParts.push({ ...p, netW, netH, rot });
+            } else {
+              remaining.push(p);
+            }
+          }
 
-      html += `<h2>Лист ${i + 1} (${sheet.color})</h2>`;
-      html += `<img src="${sheet.canvas.toDataURL()}" style="width:95%; border:1px solid #000;">`;
+          const efficiency = (usedAreaM2 / fullSheetAreaM2) * 100;
+          const wastePercent = 100 - efficiency;
 
-      html += `<p style="font-size:18px;">Плоскост: ${sheet.width} × ${
-        sheet.height
-      } мм (${sheetArea.toFixed(3)} m²)</p>`;
+          const title = document.createElement('h3');
+          title.innerHTML = `
+            Лист #${sheetGlobalIndex} — Материал: <span style="display:inline-block; width:14px; height:14px; background:${board.hex}; border-radius:3px; vertical-align:middle;"></span> <b>${board.name}</b> (${board.w} × ${board.h} мм)
+            <div style="font-size:0.9rem; color:#4a5568; margin-top:4px;">
+              📊 Рандеман: <b>${efficiency.toFixed(1)}%</b> (${usedAreaM2.toFixed(2)} m²) | 
+              🗑️ Фира: <b>${wastePercent.toFixed(1)}%</b> (${(fullSheetAreaM2 - usedAreaM2).toFixed(2)} m²)
+            </div>
+          `;
+          sheetBlock.appendChild(title);
 
-      html += `<h3>Детайли</h3>`;
-      html += `<table border="1" cellspacing="0" cellpadding="6" style="border-collapse:collapse; width:95%;">`;
-      html += `<tr><th>№</th><th>Размер (W×H)</th><th>Кант</th><th>Цвят</th><th>Дебелина</th><th>Площ</th></tr>`;
+          canvasWrapper.appendChild(canvas);
+          sheetBlock.appendChild(canvasWrapper);
 
-      sheet.parts.forEach((p, index) => {
-        const edges = [];
-        if (p.edge.top) edges.push('Ширина 1 (горе)');
-        if (p.edge.bottom) edges.push('Ширина 2 (долу)');
-        if (p.edge.left) edges.push('Височина 1 (ляво)');
-        if (p.edge.right) edges.push('Височина 2 (дясно)');
+          let tableHTML = `
+            <table class="data-table" style="margin-top:10px;">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Размер (Бруто)</th>
+                  <th>Чист Размер (Нето)</th>
+                  <th>Вид Кант</th>
+                  <th>Кантирани страни (с чисти размери в мм)</th>
+                </tr>
+              </thead>
+              <tbody>
+          `;
 
-        const area = (p.realW * p.realH) / 1_000_000;
+          placedParts.forEach((pt, idx) => {
+            let topEdged = pt.rot ? pt.edges.left : pt.edges.top;
+            let bottomEdged = pt.rot ? pt.edges.right : pt.edges.bottom;
+            let leftEdged = pt.rot ? pt.edges.top : pt.edges.left;
+            let rightEdged = pt.rot ? pt.edges.bottom : pt.edges.right;
 
-        let partStatus = '';
-        if (p.grain) {
-          partStatus = ' 🔒 [Фиксиран фладер]';
-        } else if (p.rotated) {
-          partStatus = ' (Завъртян)';
+            // Чисти размери на страните (изважда се дебелината на канта от срещуположните страни)
+            let topSideNet = pt.rot ? pt.netW : pt.netW;
+            let bottomSideNet = pt.rot ? pt.netW : pt.netW;
+            let leftSideNet = pt.rot ? pt.netH : pt.netH;
+            let rightSideNet = pt.rot ? pt.netH : pt.netH;
+
+            let edgeStrings = [];
+            if (topEdged) edgeStrings.push(`${topSideNet} мм ✓`);
+            if (bottomEdged) edgeStrings.push(`${bottomSideNet} мм ✓`);
+            if (leftEdged) edgeStrings.push(`${leftSideNet} мм ✓`);
+            if (rightEdged) edgeStrings.push(`${rightSideNet} мм ✓`);
+
+            tableHTML += `
+              <tr>
+                <td><b>${idx + 1}</b></td>
+                <td>${pt.w} × ${pt.h} мм</td>
+                <td><b>${pt.netW} × ${pt.netH} мм ${pt.rot ? '↻' : ''}</b></td>
+                <td>
+                  <span style="display:inline-block; width:12px; height:12px; background:${pt.edgeHex}; border-radius:2px; vertical-align:middle; margin-right:4px;"></span>
+                  <b>${pt.edgeName}</b>
+                </td>
+                <td>${edgeStrings.length ? edgeStrings.join(', ') : '<i>Няма кант</i>'}</td>
+              </tr>
+            `;
+          });
+          tableHTML += `</tbody></table>`;
+          
+          const tDiv = document.createElement('div');
+          tDiv.innerHTML = tableHTML;
+          sheetBlock.appendChild(tDiv);
+          container.appendChild(sheetBlock);
+
+          boardCountSummary[board.name] = (boardCountSummary[board.name] || 0) + 1;
+          list = remaining;
+          sheetGlobalIndex++;
         }
+      }
 
-        html += `<tr>
-          <td>${index + 1}</td>
-          <td>${p.realW} × ${p.realH}${partStatus}</td>
-          <td>${edges.join(', ') || '-'}</td>
-          <td>${edges.length ? p.edgeColor : '-'}</td>
-          <td>${edges.length ? p.edgeThickness + ' мм' : '-'}</td>
-          <td>${area.toFixed(3)}</td>
-        </tr>`;
-      });
+      // Финансов отчет в EUR
+      let costHTML = `<h3 style="color:#2b6cb0; margin-bottom:12px;">💶 Подробна финансова спецификация</h3><ul style="line-height:1.8; list-style:none;">`;
+      
+      for (let bName in boardCountSummary) {
+        const count = boardCountSummary[bName];
+        const bObj = boardTypes.find(b => b.name === bName);
+        const price = bObj ? bObj.price || 55 : 55;
+        const totalB = count * price;
+        totalCostProject += totalB;
+        costHTML += `<li>Плоскост <b>${bName}</b>: ${count} бр. × €${price.toFixed(2)} = <b>€${totalB.toFixed(2)}</b></li>`;
+      }
 
-      html += `</table>`;
+      for (let eName in edgeMetersSummary) {
+        const netM = edgeMetersSummary[eName];
+        const grossM = netM * 1.10;
+        const eObj = edgeTypes.find(e => e.name === eName);
+        const price = eObj ? eObj.pricePerM || 0.5 : 0.5;
+        const totalE = grossM * price;
+        totalCostProject += totalE;
+        costHTML += `<li>Кант <b>${eName}</b>: Чисти <b>${netM.toFixed(2)} м</b> (с +10% аванс: <b>${grossM.toFixed(2)} м</b>) × €${price.toFixed(2)}/м = <b>€${totalE.toFixed(2)}</b></li>`;
+      }
 
-      html += `<h3>Площи</h3>`;
-      html += `<table border="1" cellspacing="0" cellpadding="6" style="width:60%;">`;
-      html += `<tr><td>Площ на плоскостта</td><td>${sheetArea.toFixed(3)} m²</td></tr>`;
-      html += `<tr><td>Използвана площ</td><td>${usedArea.toFixed(3)} m²</td></tr>`;
-      html += `<tr><td>Остатък</td><td>${waste.toFixed(3)} m²</td></tr>`;
-      html += `<tr><td>Използваемост</td><td>${usagePercent.toFixed(1)}%</td></tr>`;
-      html += `</table><hr>`;
-    });
+      costHTML += `</ul><h3 style="color:#2f855a; margin-top:12px; border-top:1px solid #cbd5e0; padding-top:8px;">ОБЩО ЗА МАТЕРИАЛИ: €${totalCostProject.toFixed(2)}</h3>`;
 
-    const edgeSpec = calculateEdgeSpec();
-    html += `<h2>Обща спецификация на кант</h2>`;
-    html += `<table border="1" cellspacing="0" cellpadding="6" style="width:60%;">`;
-    html += `<tr><th>Кант</th><th>Общо метри</th></tr>`;
+      const summaryBlock = document.createElement('div');
+      summaryBlock.className = 'sheet-block';
+      summaryBlock.style.cssText = 'border:2px solid #3182ce; background:#ebf8ff;';
+      summaryBlock.innerHTML = costHTML;
+      container.appendChild(summaryBlock);
+    };
+  }
 
-    let hasEdges = false;
-    for (const key in edgeSpec) {
-      hasEdges = true;
-      html += `<tr><td>${key}</td><td>${edgeSpec[key].toFixed(2)} м</td></tr>`;
-    }
+  // Печат
+  const exportBtn = document.getElementById('exportPDF');
+  if (exportBtn) {
+    exportBtn.onclick = (e) => {
+      e.preventDefault();
+      window.print();
+    };
+  }
 
-    if (!hasEdges) {
-      html += `<tr><td colspan="2">Няма заявени кантове</td></tr>`;
-    }
-
-    html += `</table></body></html>`;
-
-    win.document.write(html);
-    win.document.close();
-    setTimeout(() => win.print(), 300);
-  };
-
-  // Инициализираме празен преглед при зареждане
-  updatePartPreview();
+  renderMasterData();
 };
