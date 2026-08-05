@@ -38,6 +38,8 @@ window.onload = () => {
   const boardWidthInput = document.getElementById('boardWidth');
   const boardHeightInput = document.getElementById('boardHeight');
 
+  const previewCanvas = document.getElementById('partPreviewCanvas');
+
   const cancelBtn = document.createElement('button');
   cancelBtn.textContent = 'Отказ';
   cancelBtn.style.marginLeft = '10px';
@@ -57,6 +59,7 @@ window.onload = () => {
     addPartBtn.textContent = 'Добави детайл';
     cancelBtn.style.display = 'none';
     clearEdgeSelection();
+    updatePartPreview();
   }
 
   cancelBtn.onclick = () => {
@@ -79,6 +82,106 @@ window.onload = () => {
     if (boardSizes[color]) {
       boardWidthInput.value = boardSizes[color].width;
       boardHeightInput.value = boardSizes[color].height;
+    }
+  });
+
+  // --- МИНИ ПРЕГЛЕД (PREVIEW CANVAS) В РЕАЛНО ВРЕМЕ ---
+  function updatePartPreview() {
+    if (!previewCanvas) return;
+    const ctx = previewCanvas.getContext('2d');
+    const cW = previewCanvas.width;
+    const cH = previewCanvas.height;
+
+    ctx.clearRect(0, 0, cW, cH);
+
+    const w = +partWidth.value || 0;
+    const h = +partHeight.value || 0;
+
+    if (!w || !h) {
+      ctx.fillStyle = '#999';
+      ctx.font = '14px Roboto, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Въведете размери', cW / 2, cH / 2);
+      return;
+    }
+
+    const margin = 20;
+    const maxDrawW = cW - margin * 2;
+    const maxDrawH = cH - margin * 2;
+    const scale = Math.min(maxDrawW / w, maxDrawH / h);
+
+    const drawW = w * scale;
+    const drawH = h * scale;
+    const startX = (cW - drawW) / 2;
+    const startY = (cH - drawH) / 2;
+
+    // Фон на детайла
+    ctx.fillStyle = '#eaf2f8';
+    ctx.fillRect(startX, startY, drawW, drawH);
+
+    // Фладер
+    const boardHasGrain = document.getElementById('boardHasGrain')
+      ? document.getElementById('boardHasGrain').checked
+      : true;
+
+    if (boardHasGrain) {
+      drawWoodGrain(ctx, startX, startY, drawW, drawH, false, 0.2);
+    }
+
+    // Контур
+    const isFixedGrain = document.getElementById('partGrain')
+      ? document.getElementById('partGrain').checked
+      : false;
+    ctx.strokeStyle = boardHasGrain && isFixedGrain ? '#0f4c81' : '#1a73e8';
+    ctx.lineWidth = boardHasGrain && isFixedGrain ? 3 : 2;
+    ctx.strokeRect(startX, startY, drawW, drawH);
+
+    // Рисуване на кантовете
+    const edgeThicknessVisual = Math.max(3, Math.min(8, scale * (+document.getElementById('partEdgeThickness').value || 1) * 3));
+    const edgeColor = document.getElementById('edgeColor').value || '#e74c3c';
+    ctx.fillStyle = edgeColor !== 'Неуточнен' ? edgeColor : '#e74c3c';
+
+    if (edgeTop && edgeTop.checked) {
+      ctx.fillRect(startX, startY, drawW, edgeThicknessVisual);
+    }
+    if (edgeBottom && edgeBottom.checked) {
+      ctx.fillRect(startX, startY + drawH - edgeThicknessVisual, drawW, edgeThicknessVisual);
+    }
+    if (edgeLeft && edgeLeft.checked) {
+      ctx.fillRect(startX, startY, edgeThicknessVisual, drawH);
+    }
+    if (edgeRight && edgeRight.checked) {
+      ctx.fillRect(startX + drawW - edgeThicknessVisual, startY, edgeThicknessVisual, drawH);
+    }
+
+    // Размери и иконка за фладер
+    ctx.fillStyle = '#000000';
+    ctx.font = '12px Roboto, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    let label = `${w}×${h}`;
+    if (boardHasGrain && isFixedGrain) label += ' 🔒';
+    
+    ctx.fillText(label, cW / 2, cH / 2);
+  }
+
+  // Закачане на събития за актуализация на прегледа в реално време
+  [
+    partWidth,
+    partHeight,
+    document.getElementById('partEdgeThickness'),
+    document.getElementById('edgeColor'),
+    document.getElementById('partGrain'),
+    document.getElementById('boardHasGrain'),
+    edgeTop,
+    edgeBottom,
+    edgeLeft,
+    edgeRight
+  ].forEach((el) => {
+    if (el) {
+      el.addEventListener('input', updatePartPreview);
+      el.addEventListener('change', updatePartPreview);
     }
   });
 
@@ -131,6 +234,7 @@ window.onload = () => {
 
     clearEdgeSelection();
     updatePartsList();
+    updatePartPreview();
   };
 
   function updatePartsList() {
@@ -184,6 +288,7 @@ window.onload = () => {
 
         addPartBtn.textContent = 'Запази промените';
         cancelBtn.style.display = 'inline-block';
+        updatePartPreview();
       };
 
       const delBtn = document.createElement('button');
@@ -348,7 +453,6 @@ window.onload = () => {
     ctx.fillStyle = '#f4f1ea';
     ctx.fillRect(0, 0, width, height);
 
-    // Четене на чекбокса за фладер на плоскостта
     const boardHasGrain = document.getElementById('boardHasGrain')
       ? document.getElementById('boardHasGrain').checked
       : true;
@@ -364,7 +468,7 @@ window.onload = () => {
     return sheet;
   }
 
-  // --- РИСУВАНЕ НА КАНТОВЕ ---
+  // --- РИСУВАНЕ НА КАНТОВЕ ВЪРХУ ПЛОСКОСТТА ---
   function drawEdges(ctx, p, placed) {
     const edgeThicknessVisual = 8;
     const baseOffset = 12;
@@ -416,7 +520,6 @@ window.onload = () => {
 
       let placed = maxRects.insert(partW + kerf, partH + kerf);
 
-      // ВЪРТЕНЕ: Разрешава се ако плоскостта НЯМА фладер ИЛИ детайлът НЕ Е с фиксиран фладер
       const allowRotation = !boardHasGrain || !currentPart.grain;
 
       if (!placed && allowRotation) {
@@ -453,7 +556,7 @@ window.onload = () => {
       ctx.lineWidth = (boardHasGrain && currentPart.grain) ? 3 : 2;
       ctx.strokeRect(placed.x, placed.y, partW, partH);
 
-      // 4. Текст в ГОРНИЯ ЛЯВ ЪГЪЛ
+      // 4. Текст
       const textMarginX = 12 + 8 + 10;
       const textMarginY = 12 + 8 + 35;
 
@@ -626,4 +729,7 @@ window.onload = () => {
     win.document.close();
     setTimeout(() => win.print(), 300);
   };
+
+  // Инициализираме празен преглед при зареждане
+  updatePartPreview();
 };
