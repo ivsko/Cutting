@@ -145,7 +145,7 @@ window.onload = () => {
 
       li.textContent =
         `${i + 1}. W:${p.w} × H:${p.h} (${p.boardColor})` +
-        (p.grain ? ' 🔒 [Фиксиран]' : '') +
+        (p.grain ? ' 🔒 [Фиксиран фладер]' : '') +
         (edges.length
           ? ` | кант: ${edges.join(', ')} | ${p.edgeColor} ${p.edgeThickness}мм`
           : ' | без кант');
@@ -293,7 +293,7 @@ window.onload = () => {
     }
   }
 
-  // --- РИСУВАНЕ НА ФЛАДЕР ---
+  // --- РИСУВАНЕ НА ФЛАДЕР / ДЪРВЕСНИ ИЗВИВКИ ---
   function drawWoodGrain(ctx, x, y, w, h, isVertical, opacity = 0.12) {
     ctx.save();
     ctx.beginPath();
@@ -348,7 +348,14 @@ window.onload = () => {
     ctx.fillStyle = '#f4f1ea';
     ctx.fillRect(0, 0, width, height);
 
-    drawWoodGrain(ctx, 0, 0, width, height, false, 0.08);
+    // Четене на чекбокса за фладер на плоскостта
+    const boardHasGrain = document.getElementById('boardHasGrain')
+      ? document.getElementById('boardHasGrain').checked
+      : true;
+
+    if (boardHasGrain) {
+      drawWoodGrain(ctx, 0, 0, width, height, false, 0.08);
+    }
 
     ctx.strokeStyle = '#000000';
     ctx.lineWidth = 4;
@@ -389,6 +396,10 @@ window.onload = () => {
     const ctx = sheet.ctx;
     const kerf = +(document.getElementById('kerf').value || 0);
 
+    const boardHasGrain = document.getElementById('boardHasGrain')
+      ? document.getElementById('boardHasGrain').checked
+      : true;
+
     const maxRects = new MaxRects(sheet.width, sheet.height);
     const remaining = [];
 
@@ -405,8 +416,10 @@ window.onload = () => {
 
       let placed = maxRects.insert(partW + kerf, partH + kerf);
 
-      // Завъртане само ако детайлът НЯМА фиксиран фладер
-      if (!placed && !currentPart.grain) {
+      // ВЪРТЕНЕ: Разрешава се ако плоскостта НЯМА фладер ИЛИ детайлът НЕ Е с фиксиран фладер
+      const allowRotation = !boardHasGrain || !currentPart.grain;
+
+      if (!placed && allowRotation) {
         placed = maxRects.insert(partH + kerf, partW + kerf);
         if (placed) {
           [partW, partH] = [partH, partW];
@@ -426,16 +439,18 @@ window.onload = () => {
         continue;
       }
 
-      // 1. Заден фон на детайла
+      // 1. Заден фон
       ctx.fillStyle = '#eaf2f8';
       ctx.fillRect(placed.x, placed.y, partW, partH);
 
-      // 2. Чертане на фладера
-      drawWoodGrain(ctx, placed.x, placed.y, partW, partH, currentPart.rotated, 0.15);
+      // 2. Чертане на фладер САМО АКО плоскостта има такъв
+      if (boardHasGrain) {
+        drawWoodGrain(ctx, placed.x, placed.y, partW, partH, currentPart.rotated, 0.15);
+      }
 
-      // 3. Външен контур (По-тъмен и дебел контур за ФИКСИРАНИТЕ)
-      ctx.strokeStyle = currentPart.grain ? '#0f4c81' : '#1a73e8';
-      ctx.lineWidth = currentPart.grain ? 3 : 2;
+      // 3. Контур
+      ctx.strokeStyle = (boardHasGrain && currentPart.grain) ? '#0f4c81' : '#1a73e8';
+      ctx.lineWidth = (boardHasGrain && currentPart.grain) ? 3 : 2;
       ctx.strokeRect(placed.x, placed.y, partW, partH);
 
       // 4. Текст в ГОРНИЯ ЛЯВ ЪГЪЛ
@@ -447,9 +462,8 @@ window.onload = () => {
       ctx.textAlign = 'left';
       ctx.textBaseline = 'alphabetic';
 
-      // Обозначение за фиксиран фладер или завъртане
       let statusTag = '';
-      if (currentPart.grain) {
+      if (boardHasGrain && currentPart.grain) {
         statusTag = ' 🔒 (Фиксиран)';
       } else if (currentPart.rotated) {
         statusTag = ' ↻';
@@ -458,7 +472,7 @@ window.onload = () => {
       const labelText = `${partW} × ${partH}${statusTag}`;
       ctx.fillText(labelText, placed.x + textMarginX, placed.y + textMarginY);
 
-      // 5. Чертане на кантовете
+      // 5. Кантове
       drawEdges(ctx, currentPart, {
         x: placed.x,
         y: placed.y,
