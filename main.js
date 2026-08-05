@@ -11,7 +11,7 @@ window.onload = () => {
   }
   let parts = [];
   let sheets = [];
-  let boardSizes = {}; // запомня размери по цвят
+  let boardSizes = {};
   let editingIndex = null;
 
   // --- РЕФЕРЕНЦИИ КЪМ ЧЕКБОКСИТЕ ЗА КАНТ ---
@@ -38,7 +38,6 @@ window.onload = () => {
   const boardWidthInput = document.getElementById('boardWidth');
   const boardHeightInput = document.getElementById('boardHeight');
 
-  // Бутон за отказ от редакция
   const cancelBtn = document.createElement('button');
   cancelBtn.textContent = 'Отказ';
   cancelBtn.style.marginLeft = '10px';
@@ -84,8 +83,8 @@ window.onload = () => {
   });
 
   addPartBtn.onclick = () => {
-    const w = +partWidth.value;
-    const h = +partHeight.value;
+    const w = +partWidth.value; // Ширина (по X)
+    const h = +partHeight.value; // Височина (по Y)
     const count = +partCount.value || 1;
 
     if (!w || !h) return;
@@ -139,18 +138,18 @@ window.onload = () => {
     parts.forEach((p, i) => {
       const li = document.createElement('li');
       const edges = [];
-      if (p.edge.top) edges.push('горе');
-      if (p.edge.bottom) edges.push('долу');
-      if (p.edge.left) edges.push('ляво');
-      if (p.edge.right) edges.push('дясно');
+      if (p.edge.top) edges.push('Ширина 1 (горе)');
+      if (p.edge.bottom) edges.push('Ширина 2 (долу)');
+      if (p.edge.left) edges.push('Височина 1 (ляво)');
+      if (p.edge.right) edges.push('Височина 2 (дясно)');
 
       li.textContent =
-        `${i + 1}. ${p.w} × ${p.h} (${p.boardColor})` +
+        `${i + 1}. W:${p.w} × H:${p.h} (${p.boardColor})` +
+        (p.grain ? ' [Фладер]' : '') +
         (edges.length
           ? ` | кант: ${edges.join(', ')} | ${p.edgeColor} ${p.edgeThickness}мм`
           : ' | без кант');
 
-      // --- БУТОН ЗА РЕДАКТИРАНЕ ---
       const editBtn = document.createElement('button');
       editBtn.textContent = '✏️';
       editBtn.style.marginLeft = '10px';
@@ -160,7 +159,6 @@ window.onload = () => {
       editBtn.style.padding = '4px 8px';
       editBtn.style.cursor = 'pointer';
       editBtn.style.borderRadius = '4px';
-      editBtn.style.fontSize = '14px';
 
       editBtn.onclick = (e) => {
         e.stopPropagation();
@@ -188,7 +186,6 @@ window.onload = () => {
         cancelBtn.style.display = 'inline-block';
       };
 
-      // --- БУТОН ЗА ИЗТРИВАНЕ ---
       const delBtn = document.createElement('button');
       delBtn.textContent = '✖';
       delBtn.style.marginLeft = '5px';
@@ -198,14 +195,11 @@ window.onload = () => {
       delBtn.style.padding = '4px 8px';
       delBtn.style.cursor = 'pointer';
       delBtn.style.borderRadius = '4px';
-      delBtn.style.fontSize = '14px';
 
       delBtn.onclick = (e) => {
         e.stopPropagation();
         parts.splice(i, 1);
-        if (editingIndex === i) {
-          resetFormText();
-        }
+        if (editingIndex === i) resetFormText();
         updatePartsList();
       };
 
@@ -314,8 +308,7 @@ window.onload = () => {
     const sheet = { width, height, canvas, ctx, parts: [], color };
     sheets.push(sheet);
 
-    // Заден фон на цялата плоскост
-    ctx.fillStyle = '#eaeaea';
+    ctx.fillStyle = '#f4f1ea';
     ctx.fillRect(0, 0, width, height);
 
     ctx.strokeStyle = '#000000';
@@ -325,32 +318,71 @@ window.onload = () => {
     return sheet;
   }
 
-  // --- АКУРАТНО РИСУВАНЕ НА КАНТОВЕ С ОФСЕТ ---
-  function drawEdges(ctx, p, placed) {
-    const edgeThicknessVisual = 8; // Дебелина на линията на канта
-    const offset = 12; // Вътрешен офсет (отстъп) от контура, за да не се застъпват с друг детайл
+  // --- СИМУЛАЦИЯ НА ФЛАДЕР (ДЪРВЕСНИ ИЗВИВКИ) ---
+  function drawWoodGrain(ctx, x, y, w, h, isVertical) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.clip(); // Ограничава линиите само в детайла
 
-    const x = placed.x + offset;
-    const y = placed.y + offset;
-    const w = placed.w - (offset * 2);
-    const h = placed.h - (offset * 2);
+    ctx.strokeStyle = 'rgba(100, 70, 30, 0.12)';
+    ctx.lineWidth = 2;
+
+    const step = 20; // Разстояние между линиите
+    if (!isVertical) {
+      // Хоризонтален фладер (по W)
+      for (let pos = y + 10; pos < y + h; pos += step) {
+        ctx.beginPath();
+        ctx.moveTo(x, pos);
+        ctx.bezierCurveTo(
+          x + w * 0.3, pos + 10,
+          x + w * 0.7, pos - 10,
+          x + w, pos
+        );
+        ctx.stroke();
+      }
+    } else {
+      // Вертикален фладер (по H)
+      for (let pos = x + 10; pos < x + w; pos += step) {
+        ctx.beginPath();
+        ctx.moveTo(pos, y);
+        ctx.bezierCurveTo(
+          pos + 10, y + h * 0.3,
+          pos - 10, y + h * 0.7,
+          pos, y + h
+        );
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  // --- РИСУВАНЕ НА КАНТОВЕ С ОТСТОЯНИЕ ---
+  function drawEdges(ctx, p, placed) {
+    const edgeThicknessVisual = 8;  // Дебелина на линията
+    const baseOffset = 12;           // Офсет навътре
+
+    const x = placed.x + baseOffset;
+    const y = placed.y + baseOffset;
+    const w = placed.w - (baseOffset * 2);
+    const h = placed.h - (baseOffset * 2);
 
     ctx.fillStyle = p.edgeColor && p.edgeColor !== 'Неуточнен' ? p.edgeColor : '#e74c3c';
 
-    // Горе (Ширина 1)
-    if (p.edge && p.edge.top === true) {
+    // Горе
+    if (p.edge && p.edge.top) {
       ctx.fillRect(x, y, w, edgeThicknessVisual);
     }
-    // Долу (Ширина 2)
-    if (p.edge && p.edge.bottom === true) {
+    // Долу
+    if (p.edge && p.edge.bottom) {
       ctx.fillRect(x, y + h - edgeThicknessVisual, w, edgeThicknessVisual);
     }
-    // Ляво (Височина 1)
-    if (p.edge && p.edge.left === true) {
+    // Ляво
+    if (p.edge && p.edge.left) {
       ctx.fillRect(x, y, edgeThicknessVisual, h);
     }
-    // Дясно (Височина 2)
-    if (p.edge && p.edge.right === true) {
+    // Дясно
+    if (p.edge && p.edge.right) {
       ctx.fillRect(x + w - edgeThicknessVisual, y, edgeThicknessVisual, h);
     }
   }
@@ -365,10 +397,11 @@ window.onload = () => {
 
     for (let p of partsToPlace) {
       let currentPart = { ...p, edge: { ...p.edge } };
-      
+
       let partW = currentPart.w;
       let partH = currentPart.h;
 
+      // Изваждане на кант от чистия размер
       if (currentPart.edge.left) partW -= currentPart.edgeThickness;
       if (currentPart.edge.right) partW -= currentPart.edgeThickness;
       if (currentPart.edge.top) partH -= currentPart.edgeThickness;
@@ -376,12 +409,14 @@ window.onload = () => {
 
       let placed = maxRects.insert(partW + kerf, partH + kerf);
 
+      // Завъртане само ако НЯМА затворен фладер
       if (!placed && !currentPart.grain) {
         placed = maxRects.insert(partH + kerf, partW + kerf);
         if (placed) {
           [partW, partH] = [partH, partW];
           currentPart.rotated = true;
 
+          // Правилно завъртане на кантовете на 90 градуса по часовника
           currentPart.edge = {
             top: p.edge.left,
             right: p.edge.top,
@@ -396,25 +431,32 @@ window.onload = () => {
         continue;
       }
 
-      // 1. Очертаване на чистия размер на детайла (без kerf)
-      ctx.fillStyle = '#cfe8fc';
+      // 1. Заден фон на детайла
+      ctx.fillStyle = '#eaf2f8';
       ctx.fillRect(placed.x, placed.y, partW, partH);
 
-      // 2. Външен контур на детайла
+      // 2. Чертане на фладера (вертикален при завъртане)
+      drawWoodGrain(ctx, placed.x, placed.y, partW, partH, currentPart.rotated);
+
+      // 3. Външен контур
       ctx.strokeStyle = '#1a73e8';
       ctx.lineWidth = 2;
       ctx.strokeRect(placed.x, placed.y, partW, partH);
 
-      // 3. Текст с размерите
-    // 3. Текст с размерите (изместен навътре, за да не го закрива кантът)
-const textMarginX = 12 + 8 + 15; // офсет (12) + дебелина на кант (8) + малко въздух (15) = 35px
-const textMarginY = 12 + 8 + 45; // офсет (12) + дебелина на кант (8) + височина на буквите = 65px
+      // 4. Текст в центъра
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 38px Roboto, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
 
-ctx.fillStyle = '#000000';
-ctx.font = 'bold 42px Roboto, sans-serif';
-ctx.fillText(`${partW} × ${partH}`, placed.x + textMarginX, placed.y + textMarginY);
+      const labelText = `${partW} × ${partH}` + (currentPart.rotated ? ' ↻' : '');
+      ctx.fillText(labelText, placed.x + partW / 2, placed.y + partH / 2);
 
-      // 4. Нанасяне на кантовете с офсет
+      // Нулиране на текст подравняването
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+
+      // 5. Чертане на кантовете
       drawEdges(ctx, currentPart, { x: placed.x, y: placed.y, w: partW, h: partH });
 
       currentPart.x = placed.x;
@@ -502,7 +544,7 @@ ctx.fillText(`${partW} × ${partH}`, placed.x + textMarginX, placed.y + textMarg
 
       html += `<h3>Детайли</h3>`;
       html += `<table border="1" cellspacing="0" cellpadding="6" style="border-collapse:collapse; width:95%;">`;
-      html += `<tr><th>№</th><th>Размер</th><th>Кант</th><th>Цвят</th><th>Дебелина</th><th>Площ</th></tr>`;
+      html += `<tr><th>№</th><th>Размер (W×H)</th><th>Кант</th><th>Цвят</th><th>Дебелина</th><th>Площ</th></tr>`;
 
       sheet.parts.forEach((p, index) => {
         const edges = [];
@@ -515,7 +557,7 @@ ctx.fillText(`${partW} × ${partH}`, placed.x + textMarginX, placed.y + textMarg
 
         html += `<tr>
           <td>${index + 1}</td>
-          <td>${p.w} × ${p.h}</td>
+          <td>${p.realW} × ${p.realH} ${p.rotated ? '(Завъртян)' : ''}</td>
           <td>${edges.join(', ') || '-'}</td>
           <td>${edges.length ? p.edgeColor : '-'}</td>
           <td>${edges.length ? p.edgeThickness + ' мм' : '-'}</td>
@@ -527,16 +569,10 @@ ctx.fillText(`${partW} × ${partH}`, placed.x + textMarginX, placed.y + textMarg
 
       html += `<h3>Площи</h3>`;
       html += `<table border="1" cellspacing="0" cellpadding="6" style="width:60%;">`;
-      html += `<tr><td>Площ на плоскостта</td><td>${sheetArea.toFixed(
-        3
-      )} m²</td></tr>`;
-      html += `<tr><td>Използвана площ</td><td>${usedArea.toFixed(
-        3
-      )} m²</td></tr>`;
+      html += `<tr><td>Площ на плоскостта</td><td>${sheetArea.toFixed(3)} m²</td></tr>`;
+      html += `<tr><td>Използвана площ</td><td>${usedArea.toFixed(3)} m²</td></tr>`;
       html += `<tr><td>Остатък</td><td>${waste.toFixed(3)} m²</td></tr>`;
-      html += `<tr><td>Използваемост</td><td>${usagePercent.toFixed(
-        1
-      )}%</td></tr>`;
+      html += `<tr><td>Използваемост</td><td>${usagePercent.toFixed(1)}%</td></tr>`;
       html += `</table><hr>`;
     });
 
