@@ -2,107 +2,176 @@
 <html lang="bg">
 <head>
   <meta charset="UTF-8">
-  <title>Разкрой плоскости</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Професионален Разкрой и Кантиране</title>
   <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-<header id="topbar">
-  <h1>Разкрой плоскости</h1>
-  <div class="top-actions">
-    <label>Ширина на ряза:
-      <input id="kerf" type="number" value="3" step="0.1">
-    </label>
-    <button id="exportPDF">Експорт в PDF</button>
-  </div>
-</header>
 
-<main>
+  <div class="app-container">
+    <header class="app-header no-print">
+      <h1>Система за Разкрой, Кантове и Фладер</h1>
+      <p>Прецизно планиране, управление на кантове и генериране на разкройни карти</p>
+    </header>
 
-  <!-- ПАНЕЛ: ПЛОСКОСТ -->
-  <section class="panel">
-    <h2>Плоскост</h2>
+    <!-- 1. БАЗА ДАННИ ЗА МАТЕРИАЛИ -->
+    <section class="panel no-print">
+      <h2>1. База материали (Плоскости и Кантове)</h2>
+      <div class="grid-2-col">
+        
+        <!-- Добавяне на Плоскост -->
+        <div class="sub-panel">
+          <h3>📦 Видове Плоскости (Плочи)</h3>
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <label>Наименование / Декор:</label>
+              <input type="text" id="boardColorInput" value="ДЪБ СОНОМА">
+            </div>
+            <div class="form-group">
+              <label>Цвят:</label>
+              <input type="color" id="boardHexInput" value="#d2b48c" class="color-picker">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Ширина (мм):</label>
+              <input type="number" id="boardWInput" value="2800">
+            </div>
+            <div class="form-group">
+              <label>Височина (мм):</label>
+              <input type="number" id="boardHInput" value="2070">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Фладер (Текстура):</label>
+            <button type="button" id="boardGrainToggle" class="toggle-btn active">↔ Има фладер (по ширина)</button>
+          </div>
+          <button id="addBoardDefBtn" class="btn btn-secondary btn-sm">+ Добави Плоскост</button>
+          
+          <table class="data-table" id="boardsTable">
+            <thead>
+              <tr><th>Цвят</th><th>Декор</th><th>Размер</th><th>Фладер</th><th></th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
 
-    <div class="form-row">
-      <label>Цвят / код:
-        <input id="partBoardColor" list="colorList" placeholder="Бял / H3331 / Дъб">
-      </label>
-      <datalist id="colorList"></datalist>
-    </div>
+        <!-- Добавяне на Кант -->
+        <div class="sub-panel">
+          <h3>📐 Видове Кантове</h3>
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <label>Наименование / Декор:</label>
+              <input type="text" id="edgeColorInput" value="ОРЕХ 2mm">
+            </div>
+            <div class="form-group">
+              <label>Цвят:</label>
+              <input type="color" id="edgeHexInput" value="#8b4513" class="color-picker">
+            </div>
+            <div class="form-group">
+              <label>Дебелина (мм):</label>
+              <input type="number" id="edgeThickInput" value="2" step="0.5">
+            </div>
+          </div>
+          <button id="addEdgeDefBtn" class="btn btn-secondary btn-sm">+ Добави Кант</button>
 
-    <div class="form-row">
-      <label>Ширина плоскост (мм):
-        <input id="boardWidth" type="number" placeholder="2800">
-      </label>
+          <table class="data-table" id="edgesTable">
+            <thead>
+              <tr><th>Цвят</th><th>Декор</th><th>Дебелина</th><th></th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
 
-      <label>Височина плоскост (мм):
-        <input id="boardHeight" type="number" placeholder="2070">
-      </label>
-      <label>
-  <input type="checkbox" id="boardHasGrain" checked>
-  Плоскостта има фладер (шарка)
-</label>
-    </div>
-  </section>
-
-  <!-- ПАНЕЛ: ДЕТАЙЛИ -->
-  <section class="panel">
-    <h2>Добавяне на детайл</h2>
-    <div class="form-row"> 
-      <div class="size-block"> 
-        <label>Ширина (мм): <input id="partWidth" type="number"> </label> 
-        <div class="edge-row"> 
-          <label><input type="checkbox" id="edgeTop"> Кант горе</label> 
-          <label><input type="checkbox" id="edgeBottom"> Кант долу</label> 
-        </div> 
-      </div> 
-      <div class="size-block"> 
-        <label>Височина (мм): <input id="partHeight" type="number"> </label> 
-        <div class="edge-row"> 
-          <label><input type="checkbox" id="edgeLeft"> Кант ляво</label> 
-          <label><input type="checkbox" id="edgeRight"> Кант дясно</label> 
-        </div> 
       </div>
-      <label><input type="checkbox" id="partGrain"> Шарка</label>
-      <label>Брой: <input id="partCount" type="number" value="1"> </label>
-    </div>
-<canvas id="partPreviewCanvas" width="200" height="200" style="border: 1px solid #ccc; background: #fff; border-radius: 4px; margin-top: 10px;"></canvas>
-    <div class="form-row">
-      <label>Дебелина на канта (мм):
-        <input id="partEdgeThickness" type="number" value="1" min="0" max="3">
-      </label>
+    </section>
 
-      <label>Цвят на канта:
-        <input id="edgeColor" type="text" placeholder="код/цвят">
-      </label>
+    <!-- 2. ВЪВЕЖДАНЕ НА ДЕТАЙЛ -->
+    <section class="panel no-print">
+      <h2>2. Въвеждане на детайл</h2>
+      <div class="grid-2-col">
+        
+        <div>
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <label>Плоскост (Материал):</label>
+              <select id="partBoardSelect"></select>
+            </div>
+            <div class="form-group flex-2">
+              <label>Кант:</label>
+              <select id="partEdgeSelect"></select>
+            </div>
+          </div>
 
-      
-    </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Ширина (мм):</label>
+              <input type="number" id="partWidth" value="800">
+            </div>
+            <div class="form-group">
+              <label>Височина (мм):</label>
+              <input type="number" id="partHeight" value="500">
+            </div>
+            <div class="form-group">
+              <label>Брой:</label>
+              <input type="number" id="partCount" value="2" min="1">
+            </div>
+          </div>
 
-    <button id="addPart">Добави детайл</button>
+          <div class="form-group">
+            <label>Завъртане на детайла при разкрой:</label>
+            <button type="button" id="partRotateToggle" class="toggle-btn active">🔓 Разрешено въртене</button>
+          </div>
 
-    <h3>Списък с детайли</h3>
-    <ul id="partsList"></ul>
-  </section>
+          <h4>Позиция на кантовете:</h4>
+          <div class="edges-selection-grid">
+            <label><input type="checkbox" id="edgeTop" checked> Ш1 (Горе)</label>
+            <label><input type="checkbox" id="edgeBottom" checked> Ш2 (Долу)</label>
+            <label><input type="checkbox" id="edgeLeft"> В1 (Ляво)</label>
+            <label><input type="checkbox" id="edgeRight"> В2 (Дясно)</label>
+          </div>
 
-  <!-- ПАНЕЛ: РАЗКРОЙ -->
-  <section class="panel">
-    <h2>Разкрой</h2>
-    <button id="runCutting">Генерирай разкрой</button>
-  </section>
+          <button id="addPart" class="btn btn-primary">➕ Добави детайл в списъка</button>
+        </div>
 
-  <!-- ПАНЕЛ: ВИЗУАЛИЗАЦИЯ -->
-  <section class="panel">
-    <h2>Листове</h2>
-    <div id="sheetsContainer"></div>
-  </section>
+        <div class="preview-box">
+          <h4>Визуализация на детайла (С Кант)</h4>
+          <canvas id="partPreviewCanvas" width="300" height="200"></canvas>
+        </div>
 
-</main>
+      </div>
+    </section>
 
-<footer id="footer">
-  <span>© Разкрой плоскости</span>
-</footer>
+    <!-- 3. СПИСЪК С ДЕТАЙЛИ -->
+    <section class="panel no-print">
+      <h2>3. Списък с детайли за разкрой</h2>
+      <ul id="partsList" class="parts-list"></ul>
+    </section>
 
-<script src="main.js"></script>
+    <!-- 4. КОНТРОЛ НА РАЗКРОЯ -->
+    <section class="panel highlight-panel no-print">
+      <div class="cutting-controls">
+        <div class="form-row-inline">
+          <label><strong>Ширина на диска / срез (мм):</strong></label>
+          <input type="number" id="kerf" value="4" min="0" max="10" style="width: 70px;">
+        </div>
+        <button id="runCutting" class="btn btn-success btn-large">✂️ Генерирай Разкрой</button>
+      </div>
+    </section>
+
+    <!-- 5. ЕДИНСТВЕНА СЕКЦИЯ ЗА ПЕЧАТ / ЕКСПОРТ -->
+    <section class="panel print-area" id="printArea">
+      <div class="results-header no-print">
+        <h2>5. Карти за Разкрой</h2>
+        <button id="exportPDF" class="btn btn-secondary">🖨️ Печат / PDF (Само Картите)</button>
+      </div>
+      <div id="sheetsContainer" class="sheets-container">
+        <p class="placeholder-text no-print">Натиснете "Генерирай Разкрой", за да се покажат разкройните карти тук.</p>
+      </div>
+    </section>
+
+  </div>
+
+  <script src="main.js"></script>
 </body>
 </html>
