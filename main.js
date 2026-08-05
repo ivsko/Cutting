@@ -14,31 +14,20 @@ window.onload = () => {
   let boardSizes = {}; // запомня размери по цвят
   let editingIndex = null;
 
-  // --- РЕФЕРЕНЦИИ КЪМ КАНТОВЕТЕ ---
+  // --- РЕФЕРЕНЦИИ КЪМ ЧЕКБОКСИТЕ ЗА КАНТ ---
   const edgeTop = document.getElementById('edgeTop');
   const edgeBottom = document.getElementById('edgeBottom');
   const edgeLeft = document.getElementById('edgeLeft');
   const edgeRight = document.getElementById('edgeRight');
 
-  // --- ВИЗУАЛНИ КАНТОВЕ ---
-  function toggleEdge(id) {
-    const el = document.getElementById(id);
-    if (el) el.classList.toggle('active');
-  }
-
   function clearEdgeSelection() {
-    [edgeTop, edgeBottom, edgeLeft, edgeRight].forEach((el) => {
-      if (el) el.classList.remove('active');
-    });
+    if (edgeTop) edgeTop.checked = false;
+    if (edgeBottom) edgeBottom.checked = false;
+    if (edgeLeft) edgeLeft.checked = false;
+    if (edgeRight) edgeRight.checked = false;
   }
 
-  [edgeTop, edgeBottom, edgeLeft, edgeRight].forEach((el) => {
-    if (el) {
-      el.onclick = () => toggleEdge(el.id);
-    }
-  });
-
-  // --- ДОБАВЯНЕ НА ДЕТАЙЛ ---
+  // --- ЕЛЕМЕНТИ НА ФОРМАТА ---
   const partWidth = document.getElementById('partWidth');
   const partHeight = document.getElementById('partHeight');
   const partCount = document.getElementById('partCount');
@@ -112,10 +101,10 @@ window.onload = () => {
       height: +boardHeightInput.value || 2070,
     };
 
-    const isTop = edgeTop ? edgeTop.classList.contains('active') : false;
-    const isBottom = edgeBottom ? edgeBottom.classList.contains('active') : false;
-    const isLeft = edgeLeft ? edgeLeft.classList.contains('active') : false;
-    const isRight = edgeRight ? edgeRight.classList.contains('active') : false;
+    const isTop = edgeTop ? edgeTop.checked : false;
+    const isBottom = edgeBottom ? edgeBottom.checked : false;
+    const isLeft = edgeLeft ? edgeLeft.checked : false;
+    const isRight = edgeRight ? edgeRight.checked : false;
 
     const updatedPart = {
       w,
@@ -150,10 +139,11 @@ window.onload = () => {
     parts.forEach((p, i) => {
       const li = document.createElement('li');
       const edges = [];
-      if (p.edge.top) edges.push('горе');
-      if (p.edge.bottom) edges.push('долу');
-      if (p.edge.left) edges.push('ляво');
-      if (p.edge.right) edges.push('дясно');
+      if (p.edge.top) edges.push('Ширина 1 (горе)');
+      if (p.edge.bottom) edges.push('Ширина 2 (долу)');
+      if (p.edge.left) edges.push('Височина 1 (ляво)');
+      if (p.edge.right) edges.push('Височина 2 (дясно)');
+
       li.textContent =
         `${i + 1}. ${p.w} × ${p.h} (${p.boardColor})` +
         (edges.length
@@ -189,10 +179,10 @@ window.onload = () => {
           boardHeightInput.value = boardSizes[p.boardColor].height;
         }
 
-        if (edgeTop) edgeTop.classList.toggle('active', !!p.edge.top);
-        if (edgeBottom) edgeBottom.classList.toggle('active', !!p.edge.bottom);
-        if (edgeLeft) edgeLeft.classList.toggle('active', !!p.edge.left);
-        if (edgeRight) edgeRight.classList.toggle('active', !!p.edge.right);
+        if (edgeTop) edgeTop.checked = !!p.edge.top;
+        if (edgeBottom) edgeBottom.checked = !!p.edge.bottom;
+        if (edgeLeft) edgeLeft.checked = !!p.edge.left;
+        if (edgeRight) edgeRight.checked = !!p.edge.right;
 
         addPartBtn.textContent = 'Запази промените';
         cancelBtn.style.display = 'inline-block';
@@ -331,7 +321,7 @@ window.onload = () => {
     return sheet;
   }
 
-  // --- РИСУВАНЕ НА КАНТОВЕ (СТРИКТНА ПРОВЕРКА) ---
+  // --- РИСУВАНЕ НА КАНТОВЕ ---
   function drawEdges(ctx, p, placed) {
     const edgeVisual = 12;
     const realW = placed.w;
@@ -339,7 +329,6 @@ window.onload = () => {
 
     ctx.fillStyle = p.edgeColor || '#ff0000';
 
-    // РИСУВАТ СЕ ЕДИНСТВЕНО АКО СА TRUE
     if (p.edge && p.edge.top === true) {
       ctx.fillRect(placed.x, placed.y, realW, edgeVisual);
     }
@@ -447,7 +436,7 @@ window.onload = () => {
     }
   };
 
-  // --- СПЕЦИФИКАЦИЯ НА КАНТ (СТРИКТНО ИЗЧИСЛЕНИЕ) ---
+  // --- СПЕЦИФИКАЦИЯ НА КАНТ ---
   function calculateEdgeSpec() {
     const spec = {};
 
@@ -496,10 +485,10 @@ window.onload = () => {
 
       sheet.parts.forEach((p, index) => {
         const edges = [];
-        if (p.edge.top) edges.push('Горе');
-        if (p.edge.bottom) edges.push('Долу');
-        if (p.edge.left) edges.push('Ляво');
-        if (p.edge.right) edges.push('Дясно');
+        if (p.edge.top) edges.push('Ширина 1 (горе)');
+        if (p.edge.bottom) edges.push('Ширина 2 (долу)');
+        if (p.edge.left) edges.push('Височина 1 (ляво)');
+        if (p.edge.right) edges.push('Височина 2 (дясно)');
 
         const area = (p.realW * p.realH) / 1_000_000;
 
