@@ -668,7 +668,12 @@ window.onload = () => {
         costHTML += `<li>Кант <b>${eName}</b>: Чисти <b>${netM.toFixed(2)} м</b> (с +10% аванс: <b>${grossM.toFixed(2)} м</b>) × €${price.toFixed(2)}/м = <b>€${totalE.toFixed(2)}</b></li>`;
       }
 
-      costHTML += `</ul><h3 style="color:#2f855a; margin-top:12px; border-top:1px solid #cbd5e0; padding-top:8px;">ОБЩО ЗА МАТЕРИАЛИ: €${totalCostProject.toFixed(2)}</h3>`;
+      costHTML += `</ul>
+        <h3 style="color:#2f855a; margin-top:12px; border-top:1px solid #cbd5e0; padding-top:8px;">ОБЩО ЗА МАТЕРИАЛИ: €${totalCostProject.toFixed(2)}</h3>
+        
+        <div style="margin-top: 20px; text-align: center; font-size: 0.85rem; color: #4a5568; border-top: 1px dashed #cbd5e0; padding-top: 10px;">
+          Системата е разработена с 💻 и ☕ от <b>инж. Иван Колев</b> | Всички права запазени © ${new Date().getFullYear()}
+        </div>`;
 
       const summaryBlock = document.createElement('div');
       summaryBlock.className = 'sheet-block';
