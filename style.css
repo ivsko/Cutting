@@ -1,171 +1,296 @@
-/* Глобални стилове */
-html, body {
+* {
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   margin: 0;
   padding: 0;
-  height: 100%;
-  font-family: Arial, sans-serif;
-  background: #f2f2f2;
-  color: #222;
 }
 
 body {
-  display: flex;
-  flex-direction: column;
+  background-color: #f4f6f8;
+  color: #2c3e50;
+  padding: 24px;
 }
 
-/* Topbar */
-#topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 20px;
-  background: #1a73e8;
-  color: #fff;
+.app-container {
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-#topbar h1 {
-  margin: 0;
-  font-size: 20px;
+.app-header {
+  margin-bottom: 24px;
+  text-align: center;
 }
 
-.top-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.app-header h1 {
+  color: #1a365d;
+  font-size: 1.8rem;
+  margin-bottom: 4px;
 }
 
-.top-actions input {
-  width: 70px;
-  padding: 4px 6px;
-  border-radius: 4px;
-  border: none;
+.app-header p {
+  color: #718096;
+  font-size: 0.95rem;
 }
 
-.top-actions button {
-  padding: 6px 12px;
-  border-radius: 4px;
-  border: none;
-  background: #fff;
-  color: #1a73e8;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-/* Панели */
 .panel {
   background: #ffffff;
   border-radius: 8px;
-  padding: 14px 16px;
-  margin: 20px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
-  max-width: 520px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+  border: 1px solid #e2e8f0;
 }
 
-.panel h2 {
-  margin-top: 0;
-  margin-bottom: 10px;
-  font-size: 18px;
+.highlight-panel {
+  background: #ebf8ff;
+  border: 1px solid #3182ce;
 }
 
-/* Формови редове */
+h2 {
+  font-size: 1.2rem;
+  color: #2d3748;
+  margin-bottom: 16px;
+  border-bottom: 2px solid #edf2f7;
+  padding-bottom: 8px;
+}
+
+h3 { font-size: 1rem; color: #4a5568; margin-bottom: 10px; }
+h4 { font-size: 0.85rem; color: #718096; margin-bottom: 8px; }
+
+.grid-2-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 850px) {
+  .grid-2-col { grid-template-columns: 1fr; }
+}
+
+.sub-panel {
+  background: #f7fafc;
+  padding: 14px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.form-group {
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.flex-2 { flex: 2; }
+
+.form-group label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #4a5568;
+  margin-bottom: 4px;
+}
+
+.form-group input, .form-group select {
+  padding: 7px 10px;
+  border: 1px solid #cbd5e0;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background: white;
+}
+
+.color-picker {
+  height: 36px;
+  padding: 2px !important;
+  cursor: pointer;
+}
+
+.toggle-btn {
+  padding: 8px;
+  border: 1px solid #cbd5e0;
+  background: #edf2f7;
+  color: #4a5568;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+}
+
+.toggle-btn.active {
+  background: #3182ce;
+  color: white;
+  border-color: #2b6cb0;
+}
+
 .form-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
+  gap: 10px;
+}
+
+.form-row .form-group { flex: 1; }
+
+.form-row-inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.95rem;
+}
+
+.edges-selection-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  background: #edf2f7;
+  padding: 10px;
+  border-radius: 4px;
   margin-bottom: 12px;
 }
 
-label {
-  font-weight: 600;
-  font-size: 14px;
-}
+.edges-selection-grid label { font-size: 0.85rem; cursor: pointer; color: #2d3748; }
 
-input[type='number'],
-input[type='text'] {
-  width: 140px;
-  padding: 6px 8px;
-  border-radius: 4px;
-  border: 1px solid #cbd5e1;
-  font-size: 15px;
-}
-
-/* Размери + кантове */
-.size-block {
+.preview-box {
   display: flex;
   flex-direction: column;
-  min-width: 150px;
-}
-
-.edge-row {
-  display: flex;
-  gap: 10px;
-  margin-top: 6px;
-  flex-wrap: wrap;
-}
-
-.edge-row label {
-  font-weight: normal;
-}
-
-/* Бутони */
-button {
-  background: #0078ff;
-  color: white;
-  border: none;
-  padding: 10px 16px;
-  border-radius: 6px;
-  font-size: 15px;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-button:hover {
-  background: #005fcc;
-}
-
-#exportPDF {
-  margin-left: 10px;
-}
-
-/* Списък с детайли */
-#partsList {
-  list-style: none;
-  padding-left: 0;
-  margin-top: 10px;
-}
-
-#partsList li {
-  background: #fafafa;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  margin-bottom: 6px;
-}
-
-/* Листове */
-#sheetsContainer {
-  border: 1px dashed #cbd5e1;
-  padding: 10px;
-  border-radius: 8px;
-  background: #f8fafc;
-  max-height: 70vh;
-  overflow: auto;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-#sheetsContainer canvas {
+  align-items: center;
+  justify-content: center;
   background: #ffffff;
+  border: 1px dashed #cbd5e0;
   border-radius: 6px;
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
+  padding: 10px;
 }
 
-/* Footer */
-#footer {
-  padding: 8px 16px;
-  font-size: 12px;
-  color: #64748b;
-  border-top: 1px solid #e2e8f0;
-  background: #f9fafb;
+.btn {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.btn-sm { padding: 4px 8px; font-size: 0.8rem; }
+.btn-primary { background: #3182ce; color: white; width: 100%; }
+.btn-primary:hover { background: #2b6cb0; }
+.btn-success { background: #38a169; color: white; }
+.btn-success:hover { background: #2f855a; }
+.btn-secondary { background: #718096; color: white; }
+.btn-large { padding: 10px 20px; font-size: 1rem; }
+
+.cutting-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 0.85rem;
+}
+
+.data-table th, .data-table td {
+  border: 1px solid #e2e8f0;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.data-table th { background: #edf2f7; color: #4a5568; }
+
+.color-badge {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid #999;
+  vertical-align: middle;
+}
+
+.parts-list { list-style: none; }
+.parts-list li {
+  padding: 10px;
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 6px;
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.sheet-block {
+  background: white;
+  border: 1px solid #cbd5e0;
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 30px;
+  page-break-after: always;
+}
+
+.sheet-block h3 {
+  color: #2b6cb0;
+  margin-bottom: 10px;
+}
+
+.sheet-canvas-wrapper {
+  overflow-x: auto;
+  margin-bottom: 16px;
+  background: #edf2f7;
+  padding: 10px;
+  border-radius: 4px;
+}
+
+.sheet-block canvas {
+  display: block;
+  background: #ffffff;
+  border: 2px solid #2d3748;
+  margin: 0 auto;
+}
+
+.placeholder-text {
+  text-align: center;
+  color: #a0aec0;
+  padding: 20px;
+}
+
+/* --- ПРАВИЛА ЗА ПЕЧАТ (ЕКСПОРТИРА СЕ САМО РАЗКРОЯ) --- */
+@media print {
+  body {
+    background: white;
+    padding: 0;
+    margin: 0;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .panel {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .sheet-block {
+    border: none !important;
+    margin-bottom: 0 !important;
+    padding: 10px 0 !important;
+  }
+
+  .sheet-canvas-wrapper {
+    background: transparent !important;
+    padding: 0 !important;
+  }
+
+  canvas {
+    max-width: 100% !important;
+    height: auto !important;
+  }
 }
