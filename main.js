@@ -139,10 +139,10 @@ window.onload = () => {
     parts.forEach((p, i) => {
       const li = document.createElement('li');
       const edges = [];
-      if (p.edge.top) edges.push('Ширина 1 (горе)');
-      if (p.edge.bottom) edges.push('Ширина 2 (долу)');
-      if (p.edge.left) edges.push('Височина 1 (ляво)');
-      if (p.edge.right) edges.push('Височина 2 (дясно)');
+      if (p.edge.top) edges.push('горе');
+      if (p.edge.bottom) edges.push('долу');
+      if (p.edge.left) edges.push('ляво');
+      if (p.edge.right) edges.push('дясно');
 
       li.textContent =
         `${i + 1}. ${p.w} × ${p.h} (${p.boardColor})` +
