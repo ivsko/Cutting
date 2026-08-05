@@ -317,46 +317,33 @@ window.onload = () => {
     return sheet;
   }
 
-  // --- РИСУВАНЕ НА КАНТОВЕ ---
-  function drawEdges(ctx, p, placed, partW, partH) {
-    const edgeVisual = 10;
-    const edgeOffset = 15;
+  // --- РИСУВАНЕ НА КАНТОВЕ (КОРИГИРАНО) ---
+  function drawEdges(ctx, p, placed) {
+    const edgeVisual = 12; // Дебелина на линията на канта
     const realW = placed.w;
     const realH = placed.h;
 
     ctx.fillStyle = p.edgeColor || '#ff0000';
 
-    if (p.edge.top)
-      ctx.fillRect(
-        placed.x + edgeOffset,
-        placed.y + edgeOffset,
-        realW - edgeOffset * 2,
-        edgeVisual
-      );
+    // ГОРЕ (по ширина X)
+    if (p.edge.top) {
+      ctx.fillRect(placed.x, placed.y, realW, edgeVisual);
+    }
 
-    if (p.edge.bottom)
-      ctx.fillRect(
-        placed.x + edgeOffset,
-        placed.y + realH - edgeVisual - edgeOffset,
-        realW - edgeOffset * 2,
-        edgeVisual
-      );
+    // ДОЛУ (по ширина X)
+    if (p.edge.bottom) {
+      ctx.fillRect(placed.x, placed.y + realH - edgeVisual, realW, edgeVisual);
+    }
 
-    if (p.edge.left)
-      ctx.fillRect(
-        placed.x + edgeOffset,
-        placed.y + edgeOffset,
-        edgeVisual,
-        realH - edgeOffset * 2
-      );
+    // ЛЯВО (по височина Y)
+    if (p.edge.left) {
+      ctx.fillRect(placed.x, placed.y, edgeVisual, realH);
+    }
 
-    if (p.edge.right)
-      ctx.fillRect(
-        placed.x + realW - edgeVisual - edgeOffset,
-        placed.y + edgeOffset,
-        edgeVisual,
-        realH - edgeOffset * 2
-      );
+    // ДЯСНО (по височина Y)
+    if (p.edge.right) {
+      ctx.fillRect(placed.x + realW - edgeVisual, placed.y, edgeVisual, realH);
+    }
   }
 
   // --- ПЛОЩАДКА ---
@@ -368,23 +355,27 @@ window.onload = () => {
     const remaining = [];
 
     for (let p of partsToPlace) {
-      let partW = p.w;
-      let partH = p.h;
+      // Създаваме копие на обекта, за да не променяме глобалния масив
+      let currentPart = { ...p, edge: { ...p.edge } };
+      
+      let partW = currentPart.w;
+      let partH = currentPart.h;
 
-      if (p.edge.left) partW -= p.edgeThickness;
-      if (p.edge.right) partW -= p.edgeThickness;
-      if (p.edge.top) partH -= p.edgeThickness;
-      if (p.edge.bottom) partH -= p.edgeThickness;
+      if (currentPart.edge.left) partW -= currentPart.edgeThickness;
+      if (currentPart.edge.right) partW -= currentPart.edgeThickness;
+      if (currentPart.edge.top) partH -= currentPart.edgeThickness;
+      if (currentPart.edge.bottom) partH -= currentPart.edgeThickness;
 
       let placed = maxRects.insert(partW + kerf, partH + kerf);
 
-      if (!placed && !p.grain) {
+      if (!placed && !currentPart.grain) {
         placed = maxRects.insert(partH + kerf, partW + kerf);
         if (placed) {
           [partW, partH] = [partH, partW];
-          p.rotated = true;
+          currentPart.rotated = true;
 
-          p.edge = {
+          // Ротация на кантовете при завъртане на детайла на 90 градуса
+          currentPart.edge = {
             top: p.edge.left,
             right: p.edge.top,
             bottom: p.edge.right,
@@ -408,14 +399,14 @@ window.onload = () => {
       ctx.font = '60px Roboto';
       ctx.fillText(`${partW} × ${partH}`, placed.x + 40, placed.y + 80);
 
-      drawEdges(ctx, p, placed, partW, partH);
+      drawEdges(ctx, currentPart, placed);
 
-      sheet.parts.push(p);
+      currentPart.x = placed.x;
+      currentPart.y = placed.y;
+      currentPart.realW = placed.w;
+      currentPart.realH = placed.h;
 
-      p.x = placed.x;
-      p.y = placed.y;
-      p.realW = placed.w;
-      p.realH = placed.h;
+      sheet.parts.push(currentPart);
     }
 
     return remaining;
