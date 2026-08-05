@@ -406,9 +406,13 @@ window.onload = () => {
       ctx.strokeRect(placed.x, placed.y, partW, partH);
 
       // 3. Текст с размерите
-      ctx.fillStyle = '#000000';
-      ctx.font = 'bold 42px Roboto, sans-serif';
-      ctx.fillText(`${partW} × ${partH}`, placed.x + 20, placed.y + 60);
+    // 3. Текст с размерите (изместен навътре, за да не го закрива кантът)
+const textMarginX = 12 + 8 + 15; // офсет (12) + дебелина на кант (8) + малко въздух (15) = 35px
+const textMarginY = 12 + 8 + 45; // офсет (12) + дебелина на кант (8) + височина на буквите = 65px
+
+ctx.fillStyle = '#000000';
+ctx.font = 'bold 42px Roboto, sans-serif';
+ctx.fillText(`${partW} × ${partH}`, placed.x + textMarginX, placed.y + textMarginY);
 
       // 4. Нанасяне на кантовете с офсет
       drawEdges(ctx, currentPart, { x: placed.x, y: placed.y, w: partW, h: partH });
