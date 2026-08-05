@@ -314,32 +314,44 @@ window.onload = () => {
     const sheet = { width, height, canvas, ctx, parts: [], color };
     sheets.push(sheet);
 
-    ctx.strokeStyle = 'black';
+    // Заден фон на цялата плоскост
+    ctx.fillStyle = '#eaeaea';
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.strokeStyle = '#000000';
     ctx.lineWidth = 4;
     ctx.strokeRect(0, 0, width, height);
 
     return sheet;
   }
 
-  // --- РИСУВАНЕ НА КАНТОВЕ ---
+  // --- АКУРАТНО РИСУВАНЕ НА КАНТОВЕ С ОФСЕТ ---
   function drawEdges(ctx, p, placed) {
-    const edgeVisual = 12;
-    const realW = placed.w;
-    const realH = placed.h;
+    const edgeThicknessVisual = 14; // Дебелина на линията на канта
+    const offset = 2; // Вътрешен офсет (отстъп) от контура, за да не се застъпват с друг детайл
 
-    ctx.fillStyle = p.edgeColor || '#ff0000';
+    const x = placed.x + offset;
+    const y = placed.y + offset;
+    const w = placed.w - (offset * 2);
+    const h = placed.h - (offset * 2);
 
+    ctx.fillStyle = p.edgeColor && p.edgeColor !== 'Неуточнен' ? p.edgeColor : '#e74c3c';
+
+    // Горе (Ширина 1)
     if (p.edge && p.edge.top === true) {
-      ctx.fillRect(placed.x, placed.y, realW, edgeVisual);
+      ctx.fillRect(x, y, w, edgeThicknessVisual);
     }
+    // Долу (Ширина 2)
     if (p.edge && p.edge.bottom === true) {
-      ctx.fillRect(placed.x, placed.y + realH - edgeVisual, realW, edgeVisual);
+      ctx.fillRect(x, y + h - edgeThicknessVisual, w, edgeThicknessVisual);
     }
+    // Ляво (Височина 1)
     if (p.edge && p.edge.left === true) {
-      ctx.fillRect(placed.x, placed.y, edgeVisual, realH);
+      ctx.fillRect(x, y, edgeThicknessVisual, h);
     }
+    // Дясно (Височина 2)
     if (p.edge && p.edge.right === true) {
-      ctx.fillRect(placed.x + realW - edgeVisual, placed.y, edgeVisual, realH);
+      ctx.fillRect(x + w - edgeThicknessVisual, y, edgeThicknessVisual, h);
     }
   }
 
@@ -384,22 +396,27 @@ window.onload = () => {
         continue;
       }
 
+      // 1. Очертаване на чистия размер на детайла (без kerf)
       ctx.fillStyle = '#cfe8fc';
-      ctx.fillRect(placed.x, placed.y, placed.w, placed.h);
+      ctx.fillRect(placed.x, placed.y, partW, partH);
 
+      // 2. Външен контур на детайла
       ctx.strokeStyle = '#1a73e8';
-      ctx.strokeRect(placed.x, placed.y, placed.w, placed.h);
+      ctx.lineWidth = 2;
+      ctx.strokeRect(placed.x, placed.y, partW, partH);
 
-      ctx.fillStyle = '#000';
-      ctx.font = '60px Roboto';
-      ctx.fillText(`${partW} × ${partH}`, placed.x + 40, placed.y + 80);
+      // 3. Текст с размерите
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 42px Roboto, sans-serif';
+      ctx.fillText(`${partW} × ${partH}`, placed.x + 20, placed.y + 60);
 
-      drawEdges(ctx, currentPart, placed);
+      // 4. Нанасяне на кантовете с офсет
+      drawEdges(ctx, currentPart, { x: placed.x, y: placed.y, w: partW, h: partH });
 
       currentPart.x = placed.x;
       currentPart.y = placed.y;
-      currentPart.realW = placed.w;
-      currentPart.realH = placed.h;
+      currentPart.realW = partW;
+      currentPart.realH = partH;
 
       sheet.parts.push(currentPart);
     }
