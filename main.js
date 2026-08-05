@@ -12,6 +12,7 @@ window.onload = () => {
   let parts = [];
   let sheets = [];
   let boardSizes = {}; // запомня размери по цвят
+  let editingIndex = null;
 
   // --- ВИЗУАЛНИ КАНТОВЕ ---
   function toggleEdge(id) {
@@ -51,7 +52,7 @@ window.onload = () => {
     }
   });
 
-  document.getElementById('addPart').onclick = () => {
+document.getElementById('addPart').onclick = () => {
     const w = +partWidth.value;
     const h = +partHeight.value;
     const count = +partCount.value;
@@ -69,27 +70,37 @@ window.onload = () => {
 
     addColorToList(boardColor);
 
-    for (let i = 0; i < count; i++) {
-      parts.push({
-        w,
-        h,
-        grain,
-        boardColor,
-        edgeColor,
-        edgeThickness,
-        edge: {
-          top: edgeTop.classList.contains('active'),
-          bottom: edgeBottom.classList.contains('active'),
-          left: edgeLeft.classList.contains('active'),
-          right: edgeRight.classList.contains('active'),
-        },
-      });
+    const updatedPart = {
+      w,
+      h,
+      grain,
+      boardColor,
+      edgeColor,
+      edgeThickness,
+      edge: {
+        top: edgeTop.classList.contains('active'),
+        bottom: edgeBottom.classList.contains('active'),
+        left: edgeLeft.classList.contains('active'),
+        right: edgeRight.classList.contains('active'),
+      },
+    };
+
+    // АКО СМЕ В РЕЖИМ НА РЕДАКЦИЯ:
+    if (editingIndex !== null) {
+      parts[editingIndex] = updatedPart;
+      editingIndex = null; // Нулираме режима на редакция
+      document.getElementById('addPart').textContent = 'Добави детайл';
+    } else {
+      // АКО ДОБАВЯМЕ НОВИ ДЕТАЙЛИ:
+      for (let i = 0; i < count; i++) {
+        parts.push({ ...updatedPart, edge: { ...updatedPart.edge } });
+      }
     }
 
     updatePartsList();
   };
 
-  function updatePartsList() {
+ function updatePartsList() {
     partsList.innerHTML = '';
     parts.forEach((p, i) => {
       const li = document.createElement('li');
@@ -102,10 +113,53 @@ window.onload = () => {
         `${i + 1}. ${p.w} × ${p.h} (${p.boardColor})` +
         (edges.length
           ? ` | кант: ${edges.join(', ')} | ${p.edgeColor} ${p.edgeThickness}мм`
-          : ''); // --- БУТОН ЗА ИЗТРИВАНЕ ---
+          : '');
+
+      // --- БУТОН ЗА РЕДАКТИРАНЕ ---
+      const editBtn = document.createElement('button');
+      editBtn.textContent = '✏️';
+      editBtn.style.marginLeft = '10px';
+      editBtn.style.background = '#f39c12';
+      editBtn.style.color = 'white';
+      editBtn.style.border = 'none';
+      editBtn.style.padding = '4px 8px';
+      editBtn.style.cursor = 'pointer';
+      editBtn.style.borderRadius = '4px';
+      editBtn.style.fontSize = '14px';
+      
+      editBtn.onclick = (e) => {
+        e.stopPropagation();
+        editingIndex = i; // Маркираме кой детайл редактираме
+
+        // Зареждане на основните данни обратно във формата
+        partWidth.value = p.w;
+        partHeight.value = p.h;
+        partCount.value = 1; // Задаваме 1 бройка при редакция
+        boardColorInput.value = p.boardColor;
+        document.getElementById('edgeColor').value = p.edgeColor;
+        document.getElementById('partEdgeThickness').value = p.edgeThickness;
+        document.getElementById('partGrain').checked = p.grain;
+
+        // Зареждане на размерите на плоскостта
+        if (boardSizes[p.boardColor]) {
+          boardWidthInput.value = boardSizes[p.boardColor].width;
+          boardHeightInput.value = boardSizes[p.boardColor].height;
+        }
+
+        // Зареждане на визуалните кантове
+        document.getElementById('edgeTop').classList.toggle('active', p.edge.top);
+        document.getElementById('edgeBottom').classList.toggle('active', p.edge.bottom);
+        document.getElementById('edgeLeft').classList.toggle('active', p.edge.left);
+        document.getElementById('edgeRight').classList.toggle('active', p.edge.right);
+
+        // Промяна на текста на главния бутон
+        document.getElementById('addPart').textContent = 'Запази промените';
+      };
+
+      // --- БУТОН ЗА ИЗТРИВАНЕ ---
       const delBtn = document.createElement('button');
       delBtn.textContent = '✖';
-      delBtn.style.marginLeft = '10px';
+      delBtn.style.marginLeft = '5px';
       delBtn.style.background = '#e74c3c';
       delBtn.style.color = 'white';
       delBtn.style.border = 'none';
@@ -113,12 +167,19 @@ window.onload = () => {
       delBtn.style.cursor = 'pointer';
       delBtn.style.borderRadius = '4px';
       delBtn.style.fontSize = '14px';
-      li.appendChild(delBtn);
+
       delBtn.onclick = (e) => {
         e.stopPropagation();
         parts.splice(i, 1);
+        if (editingIndex === i) {
+          editingIndex = null;
+          document.getElementById('addPart').textContent = 'Добави детайл';
+        }
         updatePartsList();
       };
+
+      li.appendChild(editBtn);
+      li.appendChild(delBtn);
       partsList.appendChild(li);
     });
   }
