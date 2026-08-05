@@ -166,6 +166,7 @@ window.onload = () => {
             <td><b>${b.name}</b></td>
             <td>${b.w}×${b.h} мм</td>
             <td>${b.hasGrain ? '↔ Фладер' : '🚫 Без фладер'}</td>
+            <td><input type="number" step="0.01" value="${b.price}" style="width:70px; padding:2px;" onchange="updateBoardPrice('${b.id}', this.value)"> €</td>
             <td><button class="btn btn-sm" style="background:#e53e3e; color:#fff;" onclick="removeBoard('${b.id}')">✕</button></td>
           </tr>`;
       }
@@ -184,6 +185,7 @@ window.onload = () => {
             <td><span style="background:${e.hex}; display:inline-block; width:14px; height:14px; border-radius:3px; border:1px solid #999;"></span></td>
             <td><b>${e.name}</b></td>
             <td>${e.thick} мм</td>
+            <td><input type="number" step="0.01" value="${e.pricePerM}" style="width:70px; padding:2px;" onchange="updateEdgePrice('${e.id}', this.value)"> €/м</td>
             <td><button class="btn btn-sm" style="background:#e53e3e; color:#fff;" onclick="removeEdge('${e.id}')">✕</button></td>
           </tr>`;
       }
@@ -194,6 +196,16 @@ window.onload = () => {
 
     updatePartPreview();
   }
+
+  window.updateBoardPrice = (id, val) => {
+    const b = boardTypes.find(x => x.id === id);
+    if (b) b.price = parseFloat(val) || 0;
+  };
+
+  window.updateEdgePrice = (id, val) => {
+    const e = edgeTypes.find(x => x.id === id);
+    if (e) e.pricePerM = parseFloat(val) || 0;
+  };
 
   window.removeBoard = (id) => { boardTypes = boardTypes.filter(b => b.id !== id); renderMasterData(); };
   window.removeEdge = (id) => { edgeTypes = edgeTypes.filter(e => e.id !== id); renderMasterData(); };
@@ -233,9 +245,8 @@ window.onload = () => {
 
     if (edgeObj && edgeObj.thick > 0) {
       ctx.fillStyle = edgeObj.hex;
-      // Запазено отстояние, но тънки линии на канта (напр. фиксирана тънка дебелина или тънък инсет)
-      const offset = 10; // запазваме отстоянието
-      const lineThick = 3; // тънка линия
+      const offset = 10; 
+      const lineThick = 4.5; 
       if (edgeTop.checked) ctx.fillRect(x + offset, y, drawW - (offset * 2), lineThick);
       if (edgeBottom.checked) ctx.fillRect(x + offset, y + drawH - lineThick, drawW - (offset * 2), lineThick);
       if (edgeLeft.checked) ctx.fillRect(x, y + offset, lineThick, drawH - (offset * 2));
@@ -300,7 +311,7 @@ window.onload = () => {
       const lThick = p.edges.left ? p.edgeThick : 0;
       const rThick = p.edges.right ? p.edgeThick : 0;
 
-      if (p.edges.top) eArr.push(`${p.w - lThick - rThick} мм ✓`); // Чист размер на съответната страна
+      if (p.edges.top) eArr.push(`${p.w - lThick - rThick} мм ✓`); 
       if (p.edges.bottom) eArr.push(`${p.w - lThick - rThick} мм ✓`);
       if (p.edges.left) eArr.push(`${p.h - tThick - bThick} мм ✓`);
       if (p.edges.right) eArr.push(`${p.h - tThick - bThick} мм ✓`);
@@ -417,7 +428,7 @@ window.onload = () => {
         let list = [...grouped[bId]];
         const board = boardTypes.find(b => b.id === bId);
         if (!board) continue;
-        list.sort((a, b) => b.h - a.h || b.w - a.w);
+        list.sort((a, b) => b.h - a.h || b.w - b.w); // sort desc
 
         const fullSheetAreaM2 = (board.w * board.h) / 1000000;
 
@@ -468,9 +479,8 @@ window.onload = () => {
 
               if (p.edgeThick > 0) {
                 ctx.fillStyle = p.edgeHex;
-                // Тънки линии на канта при запазено отстояние в разкройните карти
                 const offset = 8;
-                const lineThick = 2.5;
+                const lineThick = 3.5;
                 if (p.edges.top) ctx.fillRect(rx + offset, ry, rw - (offset * 2), lineThick);
                 if (p.edges.bottom) ctx.fillRect(rx + offset, ry + rh - lineThick, rw - (offset * 2), lineThick);
                 if (p.edges.left) ctx.fillRect(rx, ry + offset, lineThick, rh - (offset * 2));
@@ -493,6 +503,53 @@ window.onload = () => {
             }
           }
 
+          // --- ИЗЧИСЛЯВАНЕ И ВИЗУАЛИЗАЦИЯ НА ОСТАТЪЦИ (OFFCUTS) ---
+          let offcuts = [];
+          
+          // 1. Главен дънен остатък (ако има незаета височина долу)
+          if (packer.currentY < board.h) {
+            let offH = board.h - packer.currentY;
+            let offW = board.w;
+            if (offH > 100 && offW > 100) {
+              offcuts.push({ x: 0, y: packer.currentY, w: offW, h: offH, label: `Основен остатък: ${offW} × ${offH} мм` });
+              
+              ctx.fillStyle = 'rgba(0, 128, 0, 0.08)';
+              ctx.fillRect(0, packer.currentY * scale, board.w * scale, offH * scale);
+              ctx.strokeStyle = 'rgba(0, 128, 0, 0.4)';
+              ctx.setLineDash([4, 4]);
+              ctx.strokeRect(0, packer.currentY * scale, board.w * scale, offH * scale);
+              ctx.setLineDash([]);
+              
+              ctx.fillStyle = '#276749';
+              ctx.font = 'bold 12px sans-serif';
+              ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+              ctx.fillText(`📦 ОСТАТЪК: ${offW} × ${offH} мм`, (board.w * scale) / 2, (packer.currentY + offH / 2) * scale);
+            }
+          }
+
+          // 2. Странични остатъци по рафтовете
+          packer.shelves.forEach((shelf, sIdx) => {
+            if (shelf.currentX < board.w) {
+              let offW = board.w - shelf.currentX;
+              let offH = shelf.height - kerf;
+              if (offW > 100 && offH > 100) {
+                offcuts.push({ x: shelf.currentX, y: shelf.y, w: offW, h: offH, label: `Страничен остатък (Рафт ${sIdx+1}): ${offW} × ${offH} мм` });
+                
+                ctx.fillStyle = 'rgba(0, 128, 0, 0.06)';
+                ctx.fillRect(shelf.currentX * scale, shelf.y * scale, offW * scale, shelf.height * scale);
+                ctx.strokeStyle = 'rgba(0, 128, 0, 0.3)';
+                ctx.setLineDash([3, 3]);
+                ctx.strokeRect(shelf.currentX * scale, shelf.y * scale, offW * scale, shelf.height * scale);
+                ctx.setLineDash([]);
+
+                ctx.fillStyle = '#276749';
+                ctx.font = '10px sans-serif';
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(`${offW}×${offH}`, (shelf.currentX + offW / 2) * scale, (shelf.y + shelf.height / 2) * scale);
+              }
+            }
+          });
+
           const efficiency = (usedAreaM2 / fullSheetAreaM2) * 100;
           const wastePercent = 100 - efficiency;
 
@@ -501,13 +558,28 @@ window.onload = () => {
             Лист #${sheetGlobalIndex} — Материал: <span style="display:inline-block; width:14px; height:14px; background:${board.hex}; border-radius:3px; vertical-align:middle;"></span> <b>${board.name}</b> (${board.w} × ${board.h} мм)
             <div style="font-size:0.9rem; color:#4a5568; margin-top:4px;">
               📊 Рандеман: <b>${efficiency.toFixed(1)}%</b> (${usedAreaM2.toFixed(2)} m²) | 
-              🗑️ Фира: <b>${wastePercent.toFixed(1)}%</b> (${(fullSheetAreaM2 - usedAreaM2).toFixed(2)} m²)
+              🗑️ Фира/Остатъци: <b>${wastePercent.toFixed(1)}%</b> (${(fullSheetAreaM2 - usedAreaM2).toFixed(2)} m²)
+              ${offcuts.length ? ` | <span style="color:#276749; font-weight:bold;">📦 Полезни остатъци: ${offcuts.length} бр.</span>` : ''}
             </div>
           `;
           sheetBlock.appendChild(title);
 
           canvasWrapper.appendChild(canvas);
           sheetBlock.appendChild(canvasWrapper);
+
+          // Информационен блок за остатъците под чертежа
+          if (offcuts.length > 0) {
+            let offcutHTML = `<div style="background:#f0fff4; border:1px solid #c6f6d5; padding:8px 12px; margin-top:8px; border-radius:4px; font-size:0.9rem; color:#22543d;">
+              <b>📦 Полезни остатъци за съхранение от този лист:</b>
+              <ul style="margin:4px 0 0 20px; padding:0;">`;
+            offcuts.forEach(o => {
+              offcutHTML += `<li><b>${o.w} × ${o.h} мм</b> (позиция X: ${o.x}мм, Y: ${o.y}мм)</li>`;
+            });
+            offcutHTML += `</ul></div>`;
+            const offDiv = document.createElement('div');
+            offDiv.innerHTML = offcutHTML;
+            sheetBlock.appendChild(offDiv);
+          }
 
           let tableHTML = `
             <table class="data-table" style="margin-top:10px;">
@@ -529,11 +601,10 @@ window.onload = () => {
             let leftEdged = pt.rot ? pt.edges.top : pt.edges.left;
             let rightEdged = pt.rot ? pt.edges.bottom : pt.edges.right;
 
-            // Чисти размери на страните (изважда се дебелината на канта от срещуположните страни)
-            let topSideNet = pt.rot ? pt.netW : pt.netW;
-            let bottomSideNet = pt.rot ? pt.netW : pt.netW;
-            let leftSideNet = pt.rot ? pt.netH : pt.netH;
-            let rightSideNet = pt.rot ? pt.netH : pt.netH;
+            let topSideNet = pt.netW;
+            let bottomSideNet = pt.netW;
+            let leftSideNet = pt.netH;
+            let rightSideNet = pt.netH;
 
             let edgeStrings = [];
             if (topEdged) edgeStrings.push(`${topSideNet} мм ✓`);
@@ -568,22 +639,30 @@ window.onload = () => {
       }
 
       // Финансов отчет в EUR
-      let costHTML = `<h3 style="color:#2b6cb0; margin-bottom:12px;">💶 Подробна финансова спецификация</h3><ul style="line-height:1.8; list-style:none;">`;
+      // Финансов отчет в EUR и общ брой детайли
+      let totalPartsCount = parts.length;
+      let costHTML = `<h3 style="color:#2b6cb0; margin-bottom:12px;">💶 Подробна финансова спецификация</h3>`;
+      
+      costHTML += `<div style="background:#fff; padding:10px; border-radius:4px; margin-bottom:12px; border:1px solid #bee3f8;">
+        📊 <b>Общ брой детайли за рязане:</b> <span style="font-size: 1.1em; color: #2c5282;"><b>${totalPartsCount} бр.</b></span>
+      </div>`;
+
+      costHTML += `<ul style="line-height:1.8; list-style:none; padding-left:0;">`;
       
       for (let bName in boardCountSummary) {
         const count = boardCountSummary[bName];
         const bObj = boardTypes.find(b => b.name === bName);
-        const price = bObj ? bObj.price || 55 : 55;
+        const price = bObj ? bObj.price : 55;
         const totalB = count * price;
         totalCostProject += totalB;
-        costHTML += `<li>Плоскост <b>${bName}</b>: ${count} бр. × €${price.toFixed(2)} = <b>€${totalB.toFixed(2)}</b></li>`;
+        costHTML += `<li>Плоскост <b>${bName}</b>: ${count} бр. листа × €${price.toFixed(2)} = <b>€${totalB.toFixed(2)}</b></li>`;
       }
 
       for (let eName in edgeMetersSummary) {
         const netM = edgeMetersSummary[eName];
         const grossM = netM * 1.10;
         const eObj = edgeTypes.find(e => e.name === eName);
-        const price = eObj ? eObj.pricePerM || 0.5 : 0.5;
+        const price = eObj ? eObj.pricePerM : 0.5;
         const totalE = grossM * price;
         totalCostProject += totalE;
         costHTML += `<li>Кант <b>${eName}</b>: Чисти <b>${netM.toFixed(2)} м</b> (с +10% аванс: <b>${grossM.toFixed(2)} м</b>) × €${price.toFixed(2)}/м = <b>€${totalE.toFixed(2)}</b></li>`;
