@@ -83,8 +83,8 @@ window.onload = () => {
   });
 
   addPartBtn.onclick = () => {
-    const w = +partWidth.value; // Ширина (по X)
-    const h = +partHeight.value; // Височина (по Y)
+    const w = +partWidth.value;
+    const h = +partHeight.value;
     const count = +partCount.value || 1;
 
     if (!w || !h) return;
@@ -145,7 +145,7 @@ window.onload = () => {
 
       li.textContent =
         `${i + 1}. W:${p.w} × H:${p.h} (${p.boardColor})` +
-        (p.grain ? ' [Фладер]' : '') +
+        (p.grain ? ' 🔒 [Фиксиран]' : '') +
         (edges.length
           ? ` | кант: ${edges.join(', ')} | ${p.edgeColor} ${p.edgeThickness}мм`
           : ' | без кант');
@@ -293,6 +293,43 @@ window.onload = () => {
     }
   }
 
+  // --- РИСУВАНЕ НА ФЛАДЕР ---
+  function drawWoodGrain(ctx, x, y, w, h, isVertical, opacity = 0.12) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.clip();
+
+    ctx.strokeStyle = `rgba(100, 70, 30, ${opacity})`;
+    ctx.lineWidth = 2;
+
+    const step = 25;
+    if (!isVertical) {
+      for (let pos = y + 10; pos < y + h; pos += step) {
+        ctx.beginPath();
+        ctx.moveTo(x, pos);
+        ctx.bezierCurveTo(
+          x + w * 0.3, pos + 12,
+          x + w * 0.7, pos - 12,
+          x + w, pos
+        );
+        ctx.stroke();
+      }
+    } else {
+      for (let pos = x + 10; pos < x + w; pos += step) {
+        ctx.beginPath();
+        ctx.moveTo(pos, y);
+        ctx.bezierCurveTo(
+          pos + 12, y + h * 0.3,
+          pos - 12, y + h * 0.7,
+          pos, y + h
+        );
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
   // --- СЪЗДАВАНЕ НА ПЛОСКОСТ ---
   function addSheet(width, height, color) {
     const scale = Math.min(1200 / width, 800 / height);
@@ -311,6 +348,8 @@ window.onload = () => {
     ctx.fillStyle = '#f4f1ea';
     ctx.fillRect(0, 0, width, height);
 
+    drawWoodGrain(ctx, 0, 0, width, height, false, 0.08);
+
     ctx.strokeStyle = '#000000';
     ctx.lineWidth = 4;
     ctx.strokeRect(0, 0, width, height);
@@ -318,76 +357,34 @@ window.onload = () => {
     return sheet;
   }
 
-  // --- СИМУЛАЦИЯ НА ФЛАДЕР (ДЪРВЕСНИ ИЗВИВКИ) ---
-  function drawWoodGrain(ctx, x, y, w, h, isVertical) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(x, y, w, h);
-    ctx.clip(); // Ограничава линиите само в детайла
-
-    ctx.strokeStyle = 'rgba(100, 70, 30, 0.12)';
-    ctx.lineWidth = 2;
-
-    const step = 20; // Разстояние между линиите
-    if (!isVertical) {
-      // Хоризонтален фладер (по W)
-      for (let pos = y + 10; pos < y + h; pos += step) {
-        ctx.beginPath();
-        ctx.moveTo(x, pos);
-        ctx.bezierCurveTo(
-          x + w * 0.3, pos + 10,
-          x + w * 0.7, pos - 10,
-          x + w, pos
-        );
-        ctx.stroke();
-      }
-    } else {
-      // Вертикален фладер (по H)
-      for (let pos = x + 10; pos < x + w; pos += step) {
-        ctx.beginPath();
-        ctx.moveTo(pos, y);
-        ctx.bezierCurveTo(
-          pos + 10, y + h * 0.3,
-          pos - 10, y + h * 0.7,
-          pos, y + h
-        );
-        ctx.stroke();
-      }
-    }
-    ctx.restore();
-  }
-
-  // --- РИСУВАНЕ НА КАНТОВЕ С ОТСТОЯНИЕ ---
+  // --- РИСУВАНЕ НА КАНТОВЕ ---
   function drawEdges(ctx, p, placed) {
-    const edgeThicknessVisual = 8;  // Дебелина на линията
-    const baseOffset = 12;           // Офсет навътре
+    const edgeThicknessVisual = 8;
+    const baseOffset = 12;
 
     const x = placed.x + baseOffset;
     const y = placed.y + baseOffset;
-    const w = placed.w - (baseOffset * 2);
-    const h = placed.h - (baseOffset * 2);
+    const w = placed.w - baseOffset * 2;
+    const h = placed.h - baseOffset * 2;
 
-    ctx.fillStyle = p.edgeColor && p.edgeColor !== 'Неуточнен' ? p.edgeColor : '#e74c3c';
+    ctx.fillStyle =
+      p.edgeColor && p.edgeColor !== 'Неуточнен' ? p.edgeColor : '#e74c3c';
 
-    // Горе
     if (p.edge && p.edge.top) {
       ctx.fillRect(x, y, w, edgeThicknessVisual);
     }
-    // Долу
     if (p.edge && p.edge.bottom) {
       ctx.fillRect(x, y + h - edgeThicknessVisual, w, edgeThicknessVisual);
     }
-    // Ляво
     if (p.edge && p.edge.left) {
       ctx.fillRect(x, y, edgeThicknessVisual, h);
     }
-    // Дясно
     if (p.edge && p.edge.right) {
       ctx.fillRect(x + w - edgeThicknessVisual, y, edgeThicknessVisual, h);
     }
   }
 
-  // --- ПЛОЩАДКА ---
+  // --- ПЛОЩАДКА ЗА ДЕТАЙЛИ ---
   function placePartsOnSheet(sheet, partsToPlace) {
     const ctx = sheet.ctx;
     const kerf = +(document.getElementById('kerf').value || 0);
@@ -401,7 +398,6 @@ window.onload = () => {
       let partW = currentPart.w;
       let partH = currentPart.h;
 
-      // Изваждане на кант от чистия размер
       if (currentPart.edge.left) partW -= currentPart.edgeThickness;
       if (currentPart.edge.right) partW -= currentPart.edgeThickness;
       if (currentPart.edge.top) partH -= currentPart.edgeThickness;
@@ -409,14 +405,13 @@ window.onload = () => {
 
       let placed = maxRects.insert(partW + kerf, partH + kerf);
 
-      // Завъртане само ако НЯМА затворен фладер
+      // Завъртане само ако детайлът НЯМА фиксиран фладер
       if (!placed && !currentPart.grain) {
         placed = maxRects.insert(partH + kerf, partW + kerf);
         if (placed) {
           [partW, partH] = [partH, partW];
           currentPart.rotated = true;
 
-          // Правилно завъртане на кантовете на 90 градуса по часовника
           currentPart.edge = {
             top: p.edge.left,
             right: p.edge.top,
@@ -435,29 +430,41 @@ window.onload = () => {
       ctx.fillStyle = '#eaf2f8';
       ctx.fillRect(placed.x, placed.y, partW, partH);
 
-      // 2. Чертане на фладера (вертикален при завъртане)
-      drawWoodGrain(ctx, placed.x, placed.y, partW, partH, currentPart.rotated);
+      // 2. Чертане на фладера
+      drawWoodGrain(ctx, placed.x, placed.y, partW, partH, currentPart.rotated, 0.15);
 
-      // 3. Външен контур
-      ctx.strokeStyle = '#1a73e8';
-      ctx.lineWidth = 2;
+      // 3. Външен контур (По-тъмен и дебел контур за ФИКСИРАНИТЕ)
+      ctx.strokeStyle = currentPart.grain ? '#0f4c81' : '#1a73e8';
+      ctx.lineWidth = currentPart.grain ? 3 : 2;
       ctx.strokeRect(placed.x, placed.y, partW, partH);
 
-      // 4. Текст в центъра
+      // 4. Текст в ГОРНИЯ ЛЯВ ЪГЪЛ
+      const textMarginX = 12 + 8 + 10;
+      const textMarginY = 12 + 8 + 35;
+
       ctx.fillStyle = '#000000';
-      ctx.font = 'bold 38px Roboto, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      const labelText = `${partW} × ${partH}` + (currentPart.rotated ? ' ↻' : '');
-      ctx.fillText(labelText, placed.x + partW / 2, placed.y + partH / 2);
-
-      // Нулиране на текст подравняването
+      ctx.font = 'bold 36px Roboto, sans-serif';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'alphabetic';
 
+      // Обозначение за фиксиран фладер или завъртане
+      let statusTag = '';
+      if (currentPart.grain) {
+        statusTag = ' 🔒 (Фиксиран)';
+      } else if (currentPart.rotated) {
+        statusTag = ' ↻';
+      }
+
+      const labelText = `${partW} × ${partH}${statusTag}`;
+      ctx.fillText(labelText, placed.x + textMarginX, placed.y + textMarginY);
+
       // 5. Чертане на кантовете
-      drawEdges(ctx, currentPart, { x: placed.x, y: placed.y, w: partW, h: partH });
+      drawEdges(ctx, currentPart, {
+        x: placed.x,
+        y: placed.y,
+        w: partW,
+        h: partH,
+      });
 
       currentPart.x = placed.x;
       currentPart.y = placed.y;
@@ -504,7 +511,8 @@ window.onload = () => {
     const spec = {};
 
     parts.forEach((p) => {
-      const hasAnyEdge = p.edge.top || p.edge.bottom || p.edge.left || p.edge.right;
+      const hasAnyEdge =
+        p.edge.top || p.edge.bottom || p.edge.left || p.edge.right;
       if (!hasAnyEdge) return;
 
       const key = `${p.edgeColor} / ${p.edgeThickness}мм`;
@@ -519,7 +527,7 @@ window.onload = () => {
     return spec;
   }
 
-  // --- PDF ---
+  // --- PDF ЕКСПОРТ ---
   document.getElementById('exportPDF').onclick = () => {
     const win = window.open('', '_blank');
     let html = '<html><body>';
@@ -555,9 +563,16 @@ window.onload = () => {
 
         const area = (p.realW * p.realH) / 1_000_000;
 
+        let partStatus = '';
+        if (p.grain) {
+          partStatus = ' 🔒 [Фиксиран фладер]';
+        } else if (p.rotated) {
+          partStatus = ' (Завъртян)';
+        }
+
         html += `<tr>
           <td>${index + 1}</td>
-          <td>${p.realW} × ${p.realH} ${p.rotated ? '(Завъртян)' : ''}</td>
+          <td>${p.realW} × ${p.realH}${partStatus}</td>
           <td>${edges.join(', ') || '-'}</td>
           <td>${edges.length ? p.edgeColor : '-'}</td>
           <td>${edges.length ? p.edgeThickness + ' мм' : '-'}</td>
