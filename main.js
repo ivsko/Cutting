@@ -22,7 +22,14 @@ window.onload = () => {
 
   // --- ВИЗУАЛНИ КАНТОВЕ ---
   function toggleEdge(id) {
-    document.getElementById(id).classList.toggle('active');
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('active');
+  }
+
+  function clearEdgeSelection() {
+    [edgeTop, edgeBottom, edgeLeft, edgeRight].forEach((el) => {
+      if (el) el.classList.remove('active');
+    });
   }
 
   [edgeTop, edgeBottom, edgeLeft, edgeRight].forEach((el) => {
@@ -42,7 +49,7 @@ window.onload = () => {
   const boardWidthInput = document.getElementById('boardWidth');
   const boardHeightInput = document.getElementById('boardHeight');
 
-  // Създаване на бутон за отказ от редакция
+  // Бутон за отказ от редакция
   const cancelBtn = document.createElement('button');
   cancelBtn.textContent = 'Отказ';
   cancelBtn.style.marginLeft = '10px';
@@ -53,12 +60,15 @@ window.onload = () => {
   cancelBtn.style.cursor = 'pointer';
   cancelBtn.style.borderRadius = '4px';
   cancelBtn.style.display = 'none';
-  addPartBtn.parentNode.insertBefore(cancelBtn, addPartBtn.nextSibling);
+  if (addPartBtn && addPartBtn.parentNode) {
+    addPartBtn.parentNode.insertBefore(cancelBtn, addPartBtn.nextSibling);
+  }
 
   function resetFormText() {
     editingIndex = null;
     addPartBtn.textContent = 'Добави детайл';
     cancelBtn.style.display = 'none';
+    clearEdgeSelection();
   }
 
   cancelBtn.onclick = () => {
@@ -87,20 +97,25 @@ window.onload = () => {
   addPartBtn.onclick = () => {
     const w = +partWidth.value;
     const h = +partHeight.value;
-    const count = +partCount.value;
+    const count = +partCount.value || 1;
+
+    if (!w || !h) return;
 
     const boardColor = normalizeColor(boardColorInput.value) || 'НЕУТОЧНЕН';
     addColorToList(boardColor);
     const edgeColor = document.getElementById('edgeColor').value || 'Неуточнен';
-    const edgeThickness = +document.getElementById('partEdgeThickness').value;
+    const edgeThickness = +document.getElementById('partEdgeThickness').value || 0;
     const grain = document.getElementById('partGrain').checked;
 
     boardSizes[boardColor] = {
-      width: +boardWidthInput.value,
-      height: +boardHeightInput.value,
+      width: +boardWidthInput.value || 2800,
+      height: +boardHeightInput.value || 2070,
     };
 
-    addColorToList(boardColor);
+    const isTop = edgeTop ? edgeTop.classList.contains('active') : false;
+    const isBottom = edgeBottom ? edgeBottom.classList.contains('active') : false;
+    const isLeft = edgeLeft ? edgeLeft.classList.contains('active') : false;
+    const isRight = edgeRight ? edgeRight.classList.contains('active') : false;
 
     const updatedPart = {
       w,
@@ -110,24 +125,23 @@ window.onload = () => {
       edgeColor,
       edgeThickness,
       edge: {
-        top: edgeTop.classList.contains('active'),
-        bottom: edgeBottom.classList.contains('active'),
-        left: edgeLeft.classList.contains('active'),
-        right: edgeRight.classList.contains('active'),
+        top: isTop,
+        bottom: isBottom,
+        left: isLeft,
+        right: isRight,
       },
     };
 
-    // АКО СМЕ В РЕЖИМ НА РЕДАКЦИЯ:
     if (editingIndex !== null) {
       parts[editingIndex] = updatedPart;
       resetFormText();
     } else {
-      // АКО ДОБАВЯМЕ НОВИ ДЕТАЙЛИ:
       for (let i = 0; i < count; i++) {
         parts.push({ ...updatedPart, edge: { ...updatedPart.edge } });
       }
     }
 
+    clearEdgeSelection();
     updatePartsList();
   };
 
@@ -144,7 +158,7 @@ window.onload = () => {
         `${i + 1}. ${p.w} × ${p.h} (${p.boardColor})` +
         (edges.length
           ? ` | кант: ${edges.join(', ')} | ${p.edgeColor} ${p.edgeThickness}мм`
-          : '');
+          : ' | без кант');
 
       // --- БУТОН ЗА РЕДАКТИРАНЕ ---
       const editBtn = document.createElement('button');
@@ -175,10 +189,10 @@ window.onload = () => {
           boardHeightInput.value = boardSizes[p.boardColor].height;
         }
 
-        edgeTop.classList.toggle('active', p.edge.top);
-        edgeBottom.classList.toggle('active', p.edge.bottom);
-        edgeLeft.classList.toggle('active', p.edge.left);
-        edgeRight.classList.toggle('active', p.edge.right);
+        if (edgeTop) edgeTop.classList.toggle('active', !!p.edge.top);
+        if (edgeBottom) edgeBottom.classList.toggle('active', !!p.edge.bottom);
+        if (edgeLeft) edgeLeft.classList.toggle('active', !!p.edge.left);
+        if (edgeRight) edgeRight.classList.toggle('active', !!p.edge.right);
 
         addPartBtn.textContent = 'Запази промените';
         cancelBtn.style.display = 'inline-block';
@@ -317,31 +331,25 @@ window.onload = () => {
     return sheet;
   }
 
-  // --- РИСУВАНЕ НА КАНТОВЕ (КОРИГИРАНО) ---
+  // --- РИСУВАНЕ НА КАНТОВЕ (СТРИКТНА ПРОВЕРКА) ---
   function drawEdges(ctx, p, placed) {
-    const edgeVisual = 12; // Дебелина на линията на канта
+    const edgeVisual = 12;
     const realW = placed.w;
     const realH = placed.h;
 
     ctx.fillStyle = p.edgeColor || '#ff0000';
 
-    // ГОРЕ (по ширина X)
-    if (p.edge.top) {
+    // РИСУВАТ СЕ ЕДИНСТВЕНО АКО СА TRUE
+    if (p.edge && p.edge.top === true) {
       ctx.fillRect(placed.x, placed.y, realW, edgeVisual);
     }
-
-    // ДОЛУ (по ширина X)
-    if (p.edge.bottom) {
+    if (p.edge && p.edge.bottom === true) {
       ctx.fillRect(placed.x, placed.y + realH - edgeVisual, realW, edgeVisual);
     }
-
-    // ЛЯВО (по височина Y)
-    if (p.edge.left) {
+    if (p.edge && p.edge.left === true) {
       ctx.fillRect(placed.x, placed.y, edgeVisual, realH);
     }
-
-    // ДЯСНО (по височина Y)
-    if (p.edge.right) {
+    if (p.edge && p.edge.right === true) {
       ctx.fillRect(placed.x + realW - edgeVisual, placed.y, edgeVisual, realH);
     }
   }
@@ -349,13 +357,12 @@ window.onload = () => {
   // --- ПЛОЩАДКА ---
   function placePartsOnSheet(sheet, partsToPlace) {
     const ctx = sheet.ctx;
-    const kerf = +document.getElementById('kerf').value;
+    const kerf = +(document.getElementById('kerf').value || 0);
 
     const maxRects = new MaxRects(sheet.width, sheet.height);
     const remaining = [];
 
     for (let p of partsToPlace) {
-      // Създаваме копие на обекта, за да не променяме глобалния масив
       let currentPart = { ...p, edge: { ...p.edge } };
       
       let partW = currentPart.w;
@@ -374,7 +381,6 @@ window.onload = () => {
           [partW, partH] = [partH, partW];
           currentPart.rotated = true;
 
-          // Ротация на кантовете при завъртане на детайла на 90 градуса
           currentPart.edge = {
             top: p.edge.left,
             right: p.edge.top,
@@ -441,11 +447,14 @@ window.onload = () => {
     }
   };
 
-  // --- СПЕЦИФИКАЦИЯ НА КАНТ ---
+  // --- СПЕЦИФИКАЦИЯ НА КАНТ (СТРИКТНО ИЗЧИСЛЕНИЕ) ---
   function calculateEdgeSpec() {
     const spec = {};
 
     parts.forEach((p) => {
+      const hasAnyEdge = p.edge.top || p.edge.bottom || p.edge.left || p.edge.right;
+      if (!hasAnyEdge) return;
+
       const key = `${p.edgeColor} / ${p.edgeThickness}мм`;
       if (!spec[key]) spec[key] = 0;
 
@@ -498,8 +507,8 @@ window.onload = () => {
           <td>${index + 1}</td>
           <td>${p.w} × ${p.h}</td>
           <td>${edges.join(', ') || '-'}</td>
-          <td>${p.edgeColor}</td>
-          <td>${p.edgeThickness} мм</td>
+          <td>${edges.length ? p.edgeColor : '-'}</td>
+          <td>${edges.length ? p.edgeThickness + ' мм' : '-'}</td>
           <td>${area.toFixed(3)}</td>
         </tr>`;
       });
@@ -526,8 +535,14 @@ window.onload = () => {
     html += `<table border="1" cellspacing="0" cellpadding="6" style="width:60%;">`;
     html += `<tr><th>Кант</th><th>Общо метри</th></tr>`;
 
+    let hasEdges = false;
     for (const key in edgeSpec) {
+      hasEdges = true;
       html += `<tr><td>${key}</td><td>${edgeSpec[key].toFixed(2)} м</td></tr>`;
+    }
+
+    if (!hasEdges) {
+      html += `<tr><td colspan="2">Няма заявени кантове</td></tr>`;
     }
 
     html += `</table></body></html>`;
