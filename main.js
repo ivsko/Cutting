@@ -328,7 +328,7 @@ window.onload = () => {
   // --- АКУРАТНО РИСУВАНЕ НА КАНТОВЕ С ОФСЕТ ---
   function drawEdges(ctx, p, placed) {
     const edgeThicknessVisual = 14; // Дебелина на линията на канта
-    const offset = 2; // Вътрешен офсет (отстъп) от контура, за да не се застъпват с друг детайл
+    const offset = 12; // Вътрешен офсет (отстъп) от контура, за да не се застъпват с друг детайл
 
     const x = placed.x + offset;
     const y = placed.y + offset;
