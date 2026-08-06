@@ -294,3 +294,31 @@ h4 { font-size: 0.85rem; color: #718096; margin-bottom: 8px; }
     height: auto !important;
   }
 }
+/* Основен стил за бутона "Изчисти всичко" */
+#clearAllParts {
+  background-color: #e53e3e;
+  color: #ffffff;
+  border: none;
+  padding: 10px 18px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 2px 4px rgba(229, 62, 62, 0.2);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Ефекти при посочване (Hover) и натискане (Active) */
+#clearAllParts:hover {
+  background-color: #c53030;
+  box-shadow: 0 4px 8px rgba(197, 48, 48, 0.3);
+  transform: translateY(-1px);
+}
+
+#clearAllParts:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(197, 48, 48, 0.2);
+}
