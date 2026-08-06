@@ -438,8 +438,8 @@ window.onload = () => {
           }
         }
 
-        // Завъртян режим (разрешен САМО ако няма фладер)
-        if (allowRotate && !hasGrain && r.w >= hK && r.h >= wK) {
+        // Завъртян режим (зависи САМО от това дали сте разрешили въртене за конкретния детайл)
+        if (allowRotate && r.w >= hK && r.h >= wK) {
           const leftoverW = r.w - hK;
           const leftoverH = r.h - wK;
           const shortSide = Math.min(leftoverW, leftoverH);
