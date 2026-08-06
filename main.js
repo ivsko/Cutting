@@ -264,12 +264,25 @@ window.onload = () => {
     ctx.strokeRect(x, y, drawW, drawH);
 
     if (edgeObj && edgeObj.thick > 0) {
-      const offset = 8; 
-      const lineThick = 4.5; 
-      if (edgeTop.checked) drawEdgeLine(ctx, x + offset, y, drawW - (offset * 2), lineThick, edgeObj.hex);
-      if (edgeBottom.checked) drawEdgeLine(ctx, x + offset, y + drawH - lineThick, drawW - (offset * 2), lineThick, edgeObj.hex);
-      if (edgeLeft.checked) drawEdgeLine(ctx, x, y + offset, lineThick, drawH - (offset * 2), edgeObj.hex);
-      if (edgeRight.checked) drawEdgeLine(ctx, x + drawW - lineThick, y + offset, lineThick, drawH - (offset * 2), edgeObj.hex);
+      const inset = 5;     // <--- С КОЛКО ПИКСЕЛА НАВЪТРЕ ОТ РЪБА ДА ВЛЕЗЕ КАНТЪТ
+      const lineThick = 5; // Дебелина на самата линия
+      const cornerGap = 10; // Скъсяване в ъглите (за да не се застъпват)
+    
+      // Горен кант (пада надолу с +inset)
+      if (edgeTop.checked) 
+        drawEdgeLine(ctx, x + cornerGap, y + inset, drawW - (cornerGap * 2), lineThick, edgeObj.hex);
+    
+      // Долен кант (се качва нагоре с -inset)
+      if (edgeBottom.checked) 
+        drawEdgeLine(ctx, x + cornerGap, y + drawH - lineThick - inset, drawW - (cornerGap * 2), lineThick, edgeObj.hex);
+    
+      // Ляв кант (отива надясно с +inset)
+      if (edgeLeft.checked) 
+        drawEdgeLine(ctx, x + inset, y + cornerGap, lineThick, drawH - (cornerGap * 2), edgeObj.hex);
+    
+      // Десен кант (отива наляво с -inset)
+      if (edgeRight.checked) 
+        drawEdgeLine(ctx, x + drawW - lineThick - inset, y + cornerGap, lineThick, drawH - (cornerGap * 2), edgeObj.hex);
     }
 
     ctx.fillStyle = '#000';
@@ -566,12 +579,21 @@ window.onload = () => {
               const rightE = rot ? p.edges.bottom : p.edges.right;
 
               if (p.edgeThick > 0) {
-                const offset = 6;
-                const lineThick = 3.5;
-                if (topE) drawEdgeLine(ctx, rx + offset, ry, rw - (offset * 2), lineThick, p.edgeHex);
-                if (bottomE) drawEdgeLine(ctx, rx + offset, ry + rh - lineThick, rw - (offset * 2), lineThick, p.edgeHex);
-                if (leftE) drawEdgeLine(ctx, rx, ry + offset, lineThick, rh - (offset * 2), p.edgeHex);
-                if (rightE) drawEdgeLine(ctx, rx + rw - lineThick, ry + offset, lineThick, rh - (offset * 2), p.edgeHex);
+                const inset = 5;     // <--- С КОЛКО ПИКСЕЛА НАВЪТРЕ ОТ РЪБА ДА ВЛЕЗЕ КАНТЪТ
+                const lineThick = 4; // Дебелина на линията за кант
+                const cornerGap = 8;   // Скъсяване в ъглите, за да не се пресичат
+              
+                if (topE) 
+                  drawEdgeLine(ctx, rx + cornerGap, ry + inset, rw - (cornerGap * 2), lineThick, p.edgeHex);
+              
+                if (bottomE) 
+                  drawEdgeLine(ctx, rx + cornerGap, ry + rh - lineThick - inset, rw - (cornerGap * 2), lineThick, p.edgeHex);
+              
+                if (leftE) 
+                  drawEdgeLine(ctx, rx + inset, ry + cornerGap, lineThick, rh - (cornerGap * 2), p.edgeHex);
+              
+                if (rightE) 
+                  drawEdgeLine(ctx, rx + rw - lineThick - inset, ry + cornerGap, lineThick, rh - (cornerGap * 2), p.edgeHex);
               }
 
               // Текст и червена индикация ↻
