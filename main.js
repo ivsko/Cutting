@@ -2,12 +2,12 @@ window.onload = () => {
   // --- БАЗА ДАННИ (Цени в EUR) ---
   let boardTypes = [
     { id: 'b1', name: 'ДЪБ СОНОМА', hex: '#d2b48c', w: 2800, h: 2070, hasGrain: true, price: 61.35 },
-    { id: 'b2', name: 'БЯЛ ГЛАНЦ', hex: '#e2e8f0', w: 2800, h: 2070, hasGrain: false, price: 48.57 }
+    { id: 'b2', name: 'БЯЛ ГЛАНЦ', hex: '#ffffff', w: 2800, h: 2070, hasGrain: false, price: 48.57 }
   ];
 
   let edgeTypes = [
     { id: 'e1', name: 'ОРЕХ 2mm', hex: '#8b4513', thick: 2, pricePerM: 0.61 },
-    { id: 'e2', name: 'БЯЛ', hex: '#3182ce', thick: 2, pricePerM: 0.46 },
+    { id: 'e2', name: 'БЯЛ', hex: '#ffffff', thick: 2, pricePerM: 0.46 },
     { id: 'e0', name: 'БЕЗ КАНТ', hex: '#a0aec0', thick: 0, pricePerM: 0 }
   ];
 
@@ -32,9 +32,10 @@ window.onload = () => {
   const partsList = document.getElementById('partsList');
   const previewCanvas = document.getElementById('partPreviewCanvas');
   const addPartBtn = document.getElementById('addPart');
+  const clearAllPartsBtn = document.getElementById('clearAllParts');
   const partRotateToggle = document.getElementById('partRotateToggle');
 
-  // Състояние за фладера на новодобавящата се плоскост
+  // Фладер
   let currentNewBoardGrain = true;
   const boardGrainToggle = document.getElementById('boardGrainToggle');
   if (boardGrainToggle) {
@@ -46,7 +47,7 @@ window.onload = () => {
     };
   }
 
-  // Управление на въртенето на детайла
+  // Въртене
   let currentPartAllowRotate = true;
   if (partRotateToggle) {
     partRotateToggle.onclick = (e) => {
@@ -57,12 +58,30 @@ window.onload = () => {
     };
   }
 
+  // Изчистване на всичко
+  if (clearAllPartsBtn) {
+    clearAllPartsBtn.onclick = (e) => {
+      e.preventDefault();
+      if (parts.length === 0) return;
+      if (confirm('Сигурни ли сте, че искате да изтриете всички детайли?')) {
+        parts = [];
+        editingIndex = -1;
+        if (addPartBtn) {
+          addPartBtn.textContent = '➕ Добави детайл в списъка';
+          addPartBtn.style.background = '';
+        }
+        updatePartsList();
+        const container = document.getElementById('sheetsContainer');
+        if (container) container.innerHTML = '';
+      }
+    };
+  }
+
   // --- ДОБАВЯНЕ НА НОВА ПЛОСКОСТ ---
   const addBoardBtn = document.getElementById('addBoardDefBtn');
   if (addBoardBtn) {
     addBoardBtn.onclick = (e) => {
       e.preventDefault();
-
       const nameEl = document.getElementById('boardColorInput');
       const wEl = document.getElementById('boardWInput');
       const hEl = document.getElementById('boardHInput');
@@ -71,25 +90,21 @@ window.onload = () => {
       const name = nameEl ? nameEl.value.trim() : '';
       const w = wEl ? +wEl.value : 0;
       const h = hEl ? +hEl.value : 0;
-      const hex = hexEl ? hexEl.value : '#d2b48c';
+      const hex = hexEl ? hexEl.value : '#ffffff';
 
       if (!name || !w || !h || w <= 0 || h <= 0) {
-        alert('Моля, въведете наименование, ширина и височина на плоскостта!');
+        alert('Моля, въведете валидни данни за плоскостта!');
         return;
       }
 
       boardTypes.push({
         id: 'b_' + Date.now(),
-        name,
-        hex,
-        w,
-        h,
+        name, hex, w, h,
         hasGrain: currentNewBoardGrain,
         price: 55.00
       });
 
       renderMasterData();
-
       if (nameEl) nameEl.value = '';
       if (wEl) wEl.value = '2800';
       if (hEl) hEl.value = '2070';
@@ -101,36 +116,31 @@ window.onload = () => {
   if (addEdgeBtn) {
     addEdgeBtn.onclick = (e) => {
       e.preventDefault();
-
       const nameEl = document.getElementById('edgeColorInput');
       const thickEl = document.getElementById('edgeThickInput');
       const hexEl = document.getElementById('edgeHexInput');
 
       const name = nameEl ? nameEl.value.trim() : '';
       const thick = thickEl ? +thickEl.value : 0;
-      const hex = hexEl ? hexEl.value : '#8b4513';
+      const hex = hexEl ? hexEl.value : '#ffffff';
 
       if (!name || thick < 0) {
-        alert('Моля, въведете наименование и дебелина на канта!');
+        alert('Моля, въведете валидни данни за канта!');
         return;
       }
 
       edgeTypes.push({
         id: 'e_' + Date.now(),
-        name,
-        hex,
-        thick,
+        name, hex, thick,
         pricePerM: 0.50
       });
 
       renderMasterData();
-
       if (nameEl) nameEl.value = '';
       if (thickEl) thickEl.value = '2';
     };
   }
 
-  // Рисуване на фладер (шарка на дърво)
   function drawWoodGrain(ctx, x, y, w, h, isHorizontal = true, baseColor = '#d2b48c') {
     ctx.save();
     ctx.beginPath();
@@ -151,6 +161,16 @@ window.onload = () => {
         ctx.beginPath(); ctx.moveTo(i, y); ctx.lineTo(i + 12, y + h); ctx.stroke();
       }
     }
+    ctx.restore();
+  }
+
+  function drawEdgeLine(ctx, x, y, w, h, edgeColorHex) {
+    ctx.save();
+    ctx.fillStyle = edgeColorHex;
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = '#1a202c';
+    ctx.lineWidth = 0.8;
+    ctx.strokeRect(x, y, w, h);
     ctx.restore();
   }
 
@@ -244,13 +264,12 @@ window.onload = () => {
     ctx.strokeRect(x, y, drawW, drawH);
 
     if (edgeObj && edgeObj.thick > 0) {
-      ctx.fillStyle = edgeObj.hex;
-      const offset = 10; 
+      const offset = 8; 
       const lineThick = 4.5; 
-      if (edgeTop.checked) ctx.fillRect(x + offset, y, drawW - (offset * 2), lineThick);
-      if (edgeBottom.checked) ctx.fillRect(x + offset, y + drawH - lineThick, drawW - (offset * 2), lineThick);
-      if (edgeLeft.checked) ctx.fillRect(x, y + offset, lineThick, drawH - (offset * 2));
-      if (edgeRight.checked) ctx.fillRect(x + drawW - lineThick, y + offset, lineThick, drawH - (offset * 2));
+      if (edgeTop.checked) drawEdgeLine(ctx, x + offset, y, drawW - (offset * 2), lineThick, edgeObj.hex);
+      if (edgeBottom.checked) drawEdgeLine(ctx, x + offset, y + drawH - lineThick, drawW - (offset * 2), lineThick, edgeObj.hex);
+      if (edgeLeft.checked) drawEdgeLine(ctx, x, y + offset, lineThick, drawH - (offset * 2), edgeObj.hex);
+      if (edgeRight.checked) drawEdgeLine(ctx, x + drawW - lineThick, y + offset, lineThick, drawH - (offset * 2), edgeObj.hex);
     }
 
     ctx.fillStyle = '#000';
@@ -305,23 +324,26 @@ window.onload = () => {
     if (!partsList) return;
     partsList.innerHTML = '';
     parts.forEach((p, i) => {
-      const eArr = [];
       const tThick = p.edges.top ? p.edgeThick : 0;
       const bThick = p.edges.bottom ? p.edgeThick : 0;
       const lThick = p.edges.left ? p.edgeThick : 0;
       const rThick = p.edges.right ? p.edgeThick : 0;
 
-      if (p.edges.top) eArr.push(`${p.w - lThick - rThick} мм ✓`); 
-      if (p.edges.bottom) eArr.push(`${p.w - lThick - rThick} мм ✓`);
-      if (p.edges.left) eArr.push(`${p.h - tThick - bThick} мм ✓`);
-      if (p.edges.right) eArr.push(`${p.h - tThick - bThick} мм ✓`);
+      const netW = p.w - lThick - rThick;
+      const netH = p.h - tThick - bThick;
+
+      const eArr = [];
+      if (p.edges.top) eArr.push(`${netW} ✓`); 
+      if (p.edges.bottom) eArr.push(`${netW} ✓`);
+      if (p.edges.left) eArr.push(`${netH} ✓`);
+      if (p.edges.right) eArr.push(`${netH} ✓`);
 
       const li = document.createElement('li');
       li.innerHTML = `
         <div>
           <b>#${i + 1}</b>: ${p.w} × ${p.h} мм | 
-          Плоскост: <span style="display:inline-block; width:12px; height:12px; background:${p.boardHex}; border-radius:2px; vertical-align:middle;"></span> <b>${p.boardName}</b> | 
-          Кант: <span style="display:inline-block; width:12px; height:12px; background:${p.edgeHex}; border-radius:2px; vertical-align:middle;"></span> <b>${p.edgeName}</b> 
+          Плоскост: <span style="display:inline-block; width:12px; height:12px; background:${p.boardHex}; border-radius:2px; vertical-align:middle; border:1px solid #718096;"></span> <b>${p.boardName}</b> | 
+          Кант: <span style="display:inline-block; width:12px; height:12px; background:${p.edgeHex}; border-radius:2px; vertical-align:middle; border:1px solid #718096;"></span> <b>${p.edgeName}</b> ${p.edgeThick > 0 ? `(${p.edgeThick} мм)` : ''} 
           ${eArr.length ? `<span style="color:#2b6cb0; font-weight:bold; margin-left:6px;">(Кантове: ${eArr.join(', ')})</span>` : '<i>(Без кант)</i>'}
           ${!p.allowRotate ? ' 🔒' : ''}
         </div>
@@ -371,39 +393,95 @@ window.onload = () => {
     updatePartsList(); 
   };
 
-  // --- АЛГОРИТЪМ ЗА РАЗКРОЙ ---
-  class AutoShelfPacker {
-    constructor(boardW, boardH, kerf) {
-      this.boardW = boardW;
-      this.boardH = boardH;
-      this.kerf = Math.max(kerf, 8); 
-      this.shelves = [];
-      this.currentY = 0;
+  // --- ОПТИМИЗИРАН ГИЛОТИНЕН ПАКЕР (СПРАВЯ СЕ С "РИБЕНАТА КОСТ") ---
+  class UltraMaxPacker {
+    constructor(width, height, kerf = 0) {
+      this.width = width;
+      this.height = height;
+      this.kerf = kerf;
+      this.freeRects = [{ x: 0, y: 0, w: width, h: height }];
     }
 
-    insert(w, h) {
-      const itemW = w + this.kerf;
-      const itemH = h + this.kerf;
+    findBestFit(w, h, allowRotate, hasGrain) {
+      let bestRectIndex = -1;
+      let bestShortSideFit = Infinity;
+      let bestRotated = false;
 
-      for (let shelf of this.shelves) {
-        if (shelf.currentX + itemW <= this.boardW && itemH <= shelf.height) {
-          const pos = { x: shelf.currentX, y: shelf.y, w, h };
-          shelf.currentX += itemW;
-          return pos;
+      const wK = w + this.kerf;
+      const hK = h + this.kerf;
+
+      for (let i = 0; i < this.freeRects.length; i++) {
+        const r = this.freeRects[i];
+
+        // Прав режим
+        if (r.w >= wK && r.h >= hK) {
+          const leftoverW = r.w - wK;
+          const leftoverH = r.h - hK;
+          const shortSide = Math.min(leftoverW, leftoverH);
+          if (shortSide < bestShortSideFit) {
+            bestShortSideFit = shortSide;
+            bestRectIndex = i;
+            bestRotated = false;
+          }
+        }
+
+        // Завъртян режим (разрешен САМО ако няма фладер)
+        if (allowRotate && !hasGrain && r.w >= hK && r.h >= wK) {
+          const leftoverW = r.w - hK;
+          const leftoverH = r.h - wK;
+          const shortSide = Math.min(leftoverW, leftoverH);
+          if (shortSide < bestShortSideFit) {
+            bestShortSideFit = shortSide;
+            bestRectIndex = i;
+            bestRotated = true;
+          }
         }
       }
 
-      if (this.currentY + itemH <= this.boardH && itemW <= this.boardW) {
-        const newShelf = { y: this.currentY, height: itemH, currentX: itemW };
-        this.shelves.push(newShelf);
-        const pos = { x: 0, y: this.currentY, w, h };
-        this.currentY += itemH;
-        return pos;
+      if (bestRectIndex === -1) return null;
+
+      const target = this.freeRects.splice(bestRectIndex, 1)[0];
+      const actualW = bestRotated ? h : w;
+      const actualH = bestRotated ? w : h;
+      const actualWK = actualW + this.kerf;
+      const actualHK = actualH + this.kerf;
+
+      const result = { x: target.x, y: target.y, w: actualW, h: actualH, rot: bestRotated };
+
+      // Стриктно "Гилотинено" разделяне за поддържане на чисти ивици/ленти (премахва рибената кост)
+      const remW = target.w - actualWK;
+      const remH = target.h - actualHK;
+
+      if (remW > 0) {
+        this.freeRects.push({
+          x: target.x + actualWK,
+          y: target.y,
+          w: remW,
+          h: actualHK
+        });
       }
-      return null;
+
+      if (remH > 0) {
+        this.freeRects.push({
+          x: target.x,
+          y: target.y + actualHK,
+          w: target.w,
+          h: remH
+        });
+      }
+
+      // Сортиране на остатъчните правоъгълници за консолидация на срезовете
+      this.freeRects.sort((a, b) => (a.y - b.y) || (a.x - b.x));
+
+      return result;
+    }
+
+    getFreeOffcuts() {
+      return this.freeRects.filter(r => r.w >= 150 && r.h >= 150);
     }
   }
 
+  // --- СТАРТ НА РАЗКРОЯ ---
   const runBtn = document.getElementById('runCutting');
   if (runBtn) {
     runBtn.onclick = (e) => {
@@ -428,12 +506,17 @@ window.onload = () => {
         let list = [...grouped[bId]];
         const board = boardTypes.find(b => b.id === bId);
         if (!board) continue;
-        list.sort((a, b) => b.h - a.h || b.w - b.w); // sort desc
+
+        // Сортиране по височина/ширина за формиране на оптимални ивици
+        list.sort((a, b) => {
+          if (b.h !== a.h) return b.h - a.h;
+          return b.w - a.w;
+        });
 
         const fullSheetAreaM2 = (board.w * board.h) / 1000000;
 
         while (list.length > 0) {
-          const packer = new AutoShelfPacker(board.w, board.h, kerf);
+          const packer = new UltraMaxPacker(board.w, board.h, kerf);
           const sheetBlock = document.createElement('div');
           sheetBlock.className = 'sheet-block';
 
@@ -446,10 +529,12 @@ window.onload = () => {
           canvas.height = Math.round(board.h * scale);
 
           const ctx = canvas.getContext('2d');
+          
           if (board.hasGrain) {
             drawWoodGrain(ctx, 0, 0, canvas.width, canvas.height, true, board.hex);
           } else {
-            ctx.fillStyle = board.hex || '#e2e8f0'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = board.hex || '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
           }
 
           const placedParts = [];
@@ -460,36 +545,39 @@ window.onload = () => {
             let netW = p.w - (p.edges.left ? p.edgeThick : 0) - (p.edges.right ? p.edgeThick : 0);
             let netH = p.h - (p.edges.top ? p.edgeThick : 0) - (p.edges.bottom ? p.edgeThick : 0);
 
-            let rot = false;
-            let node = packer.insert(netW, netH);
-
-            if (!node && p.allowRotate && !board.hasGrain) {
-              node = packer.insert(netH, netW);
-              if (node) { rot = true; [netW, netH] = [netH, netW]; }
-            }
+            let node = packer.findBestFit(netW, netH, p.allowRotate, board.hasGrain);
 
             if (node) {
-              const rx = node.x * scale, ry = node.y * scale, rw = netW * scale, rh = netH * scale;
-              ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.fillRect(rx, ry, rw, rh);
+              const rot = node.rot;
+              const placedW = rot ? netH : netW;
+              const placedH = rot ? netW : netH;
+
+              const rx = node.x * scale, ry = node.y * scale, rw = placedW * scale, rh = placedH * scale;
 
               if (board.hasGrain) drawWoodGrain(ctx, rx, ry, rw, rh, !rot, board.hex);
               else { ctx.fillStyle = board.hex; ctx.fillRect(rx, ry, rw, rh); }
 
-              ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.strokeRect(rx, ry, rw, rh);
+              ctx.strokeStyle = '#2d3748'; ctx.lineWidth = 1; ctx.strokeRect(rx, ry, rw, rh);
+
+              // Кантове
+              const topE = rot ? p.edges.left : p.edges.top;
+              const bottomE = rot ? p.edges.right : p.edges.bottom;
+              const leftE = rot ? p.edges.top : p.edges.left;
+              const rightE = rot ? p.edges.bottom : p.edges.right;
 
               if (p.edgeThick > 0) {
-                ctx.fillStyle = p.edgeHex;
-                const offset = 8;
+                const offset = 6;
                 const lineThick = 3.5;
-                if (p.edges.top) ctx.fillRect(rx + offset, ry, rw - (offset * 2), lineThick);
-                if (p.edges.bottom) ctx.fillRect(rx + offset, ry + rh - lineThick, rw - (offset * 2), lineThick);
-                if (p.edges.left) ctx.fillRect(rx, ry + offset, lineThick, rh - (offset * 2));
-                if (p.edges.right) ctx.fillRect(rx + rw - lineThick, ry + offset, lineThick, rh - (offset * 2));
+                if (topE) drawEdgeLine(ctx, rx + offset, ry, rw - (offset * 2), lineThick, p.edgeHex);
+                if (bottomE) drawEdgeLine(ctx, rx + offset, ry + rh - lineThick, rw - (offset * 2), lineThick, p.edgeHex);
+                if (leftE) drawEdgeLine(ctx, rx, ry + offset, lineThick, rh - (offset * 2), p.edgeHex);
+                if (rightE) drawEdgeLine(ctx, rx + rw - lineThick, ry + offset, lineThick, rh - (offset * 2), p.edgeHex);
               }
 
+              // Текст и червена индикация ↻
               ctx.fillStyle = '#000'; ctx.font = 'bold 11px sans-serif';
               ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-              ctx.fillText(`${netW}×${netH}`, rx + rw / 2, ry + rh / 2);
+              ctx.fillText(`${placedW}×${placedH}${rot ? ' ↻' : ''}`, rx + rw / 2, ry + rh / 2);
 
               usedAreaM2 += (netW * netH) / 1000000;
 
@@ -497,57 +585,26 @@ window.onload = () => {
               const edgeM = edgeMm / 1000;
               edgeMetersSummary[p.edgeName] = (edgeMetersSummary[p.edgeName] || 0) + edgeM;
 
-              placedParts.push({ ...p, netW, netH, rot });
+              placedParts.push({ ...p, netW: placedW, netH: placedH, rot });
             } else {
               remaining.push(p);
             }
           }
 
-          // --- ИЗЧИСЛЯВАНЕ И ВИЗУАЛИЗАЦИЯ НА ОСТАТЪЦИ (OFFCUTS) ---
-          let offcuts = [];
-          
-          // 1. Главен дънен остатък (ако има незаета височина долу)
-          if (packer.currentY < board.h) {
-            let offH = board.h - packer.currentY;
-            let offW = board.w;
-            if (offH > 100 && offW > 100) {
-              offcuts.push({ x: 0, y: packer.currentY, w: offW, h: offH, label: `Основен остатък: ${offW} × ${offH} мм` });
-              
-              ctx.fillStyle = 'rgba(0, 128, 0, 0.08)';
-              ctx.fillRect(0, packer.currentY * scale, board.w * scale, offH * scale);
-              ctx.strokeStyle = 'rgba(0, 128, 0, 0.4)';
-              ctx.setLineDash([4, 4]);
-              ctx.strokeRect(0, packer.currentY * scale, board.w * scale, offH * scale);
-              ctx.setLineDash([]);
-              
-              ctx.fillStyle = '#276749';
-              ctx.font = 'bold 12px sans-serif';
-              ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-              ctx.fillText(`📦 ОСТАТЪК: ${offW} × ${offH} мм`, (board.w * scale) / 2, (packer.currentY + offH / 2) * scale);
-            }
-          }
+          // Полезни остатъци
+          const offcuts = packer.getFreeOffcuts();
+          offcuts.forEach(o => {
+            ctx.fillStyle = 'rgba(0, 128, 0, 0.08)';
+            ctx.fillRect(o.x * scale, o.y * scale, o.w * scale, o.h * scale);
+            ctx.strokeStyle = 'rgba(0, 128, 0, 0.4)';
+            ctx.setLineDash([4, 4]);
+            ctx.strokeRect(o.x * scale, o.y * scale, o.w * scale, o.h * scale);
+            ctx.setLineDash([]);
 
-          // 2. Странични остатъци по рафтовете
-          packer.shelves.forEach((shelf, sIdx) => {
-            if (shelf.currentX < board.w) {
-              let offW = board.w - shelf.currentX;
-              let offH = shelf.height - kerf;
-              if (offW > 100 && offH > 100) {
-                offcuts.push({ x: shelf.currentX, y: shelf.y, w: offW, h: offH, label: `Страничен остатък (Рафт ${sIdx+1}): ${offW} × ${offH} мм` });
-                
-                ctx.fillStyle = 'rgba(0, 128, 0, 0.06)';
-                ctx.fillRect(shelf.currentX * scale, shelf.y * scale, offW * scale, shelf.height * scale);
-                ctx.strokeStyle = 'rgba(0, 128, 0, 0.3)';
-                ctx.setLineDash([3, 3]);
-                ctx.strokeRect(shelf.currentX * scale, shelf.y * scale, offW * scale, shelf.height * scale);
-                ctx.setLineDash([]);
-
-                ctx.fillStyle = '#276749';
-                ctx.font = '10px sans-serif';
-                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.fillText(`${offW}×${offH}`, (shelf.currentX + offW / 2) * scale, (shelf.y + shelf.height / 2) * scale);
-              }
-            }
+            ctx.fillStyle = '#276749';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(`${Math.round(o.w)}×${Math.round(o.h)}`, (o.x + o.w / 2) * scale, (o.y + o.h / 2) * scale);
           });
 
           const efficiency = (usedAreaM2 / fullSheetAreaM2) * 100;
@@ -555,31 +612,16 @@ window.onload = () => {
 
           const title = document.createElement('h3');
           title.innerHTML = `
-            Лист #${sheetGlobalIndex} — Материал: <span style="display:inline-block; width:14px; height:14px; background:${board.hex}; border-radius:3px; vertical-align:middle;"></span> <b>${board.name}</b> (${board.w} × ${board.h} мм)
+            Лист #${sheetGlobalIndex} — Материал: <span style="display:inline-block; width:14px; height:14px; background:${board.hex}; border-radius:3px; vertical-align:middle; border:1px solid #718096;"></span> <b>${board.name}</b> (${board.w} × ${board.h} мм)
             <div style="font-size:0.9rem; color:#4a5568; margin-top:4px;">
-              📊 Рандеман: <b>${efficiency.toFixed(1)}%</b> (${usedAreaM2.toFixed(2)} m²) | 
-              🗑️ Фира/Остатъци: <b>${wastePercent.toFixed(1)}%</b> (${(fullSheetAreaM2 - usedAreaM2).toFixed(2)} m²)
-              ${offcuts.length ? ` | <span style="color:#276749; font-weight:bold;">📦 Полезни остатъци: ${offcuts.length} бр.</span>` : ''}
+              📊 Рандеман: <b style="color:${efficiency > 80 ? '#276749' : '#c53030'}">${efficiency.toFixed(1)}%</b> (${usedAreaM2.toFixed(2)} m²) | 
+              🗑️ Фира: <b>${wastePercent.toFixed(1)}%</b>
             </div>
           `;
           sheetBlock.appendChild(title);
 
           canvasWrapper.appendChild(canvas);
           sheetBlock.appendChild(canvasWrapper);
-
-          // Информационен блок за остатъците под чертежа
-          if (offcuts.length > 0) {
-            let offcutHTML = `<div style="background:#f0fff4; border:1px solid #c6f6d5; padding:8px 12px; margin-top:8px; border-radius:4px; font-size:0.9rem; color:#22543d;">
-              <b>📦 Полезни остатъци за съхранение от този лист:</b>
-              <ul style="margin:4px 0 0 20px; padding:0;">`;
-            offcuts.forEach(o => {
-              offcutHTML += `<li><b>${o.w} × ${o.h} мм</b> (позиция X: ${o.x}мм, Y: ${o.y}мм)</li>`;
-            });
-            offcutHTML += `</ul></div>`;
-            const offDiv = document.createElement('div');
-            offDiv.innerHTML = offcutHTML;
-            sheetBlock.appendChild(offDiv);
-          }
 
           let tableHTML = `
             <table class="data-table" style="margin-top:10px;">
@@ -588,8 +630,8 @@ window.onload = () => {
                   <th>#</th>
                   <th>Размер (Бруто)</th>
                   <th>Чист Размер (Нето)</th>
-                  <th>Вид Кант</th>
-                  <th>Кантирани страни (с чисти размери в мм)</th>
+                  <th>Вид Кант (Дебелина)</th>
+                  <th>Кантирани страни (Размер ✓)</th>
                 </tr>
               </thead>
               <tbody>
@@ -601,25 +643,20 @@ window.onload = () => {
             let leftEdged = pt.rot ? pt.edges.top : pt.edges.left;
             let rightEdged = pt.rot ? pt.edges.bottom : pt.edges.right;
 
-            let topSideNet = pt.netW;
-            let bottomSideNet = pt.netW;
-            let leftSideNet = pt.netH;
-            let rightSideNet = pt.netH;
-
             let edgeStrings = [];
-            if (topEdged) edgeStrings.push(`${topSideNet} мм ✓`);
-            if (bottomEdged) edgeStrings.push(`${bottomSideNet} мм ✓`);
-            if (leftEdged) edgeStrings.push(`${leftSideNet} мм ✓`);
-            if (rightEdged) edgeStrings.push(`${rightSideNet} мм ✓`);
+            if (topEdged) edgeStrings.push(`${pt.netW} мм ✓`);
+            if (bottomEdged) edgeStrings.push(`${pt.netW} мм ✓`);
+            if (leftEdged) edgeStrings.push(`${pt.netH} мм ✓`);
+            if (rightEdged) edgeStrings.push(`${pt.netH} мм ✓`);
 
             tableHTML += `
               <tr>
                 <td><b>${idx + 1}</b></td>
                 <td>${pt.w} × ${pt.h} мм</td>
-                <td><b>${pt.netW} × ${pt.netH} мм ${pt.rot ? '↻' : ''}</b></td>
+                <td><b>${pt.netW} × ${pt.netH} мм ${pt.rot ? '<span style="color:#e53e3e; font-size:1.2rem; font-weight:bold;" title="Завъртян детайл">↻</span>' : ''}</b></td>
                 <td>
-                  <span style="display:inline-block; width:12px; height:12px; background:${pt.edgeHex}; border-radius:2px; vertical-align:middle; margin-right:4px;"></span>
-                  <b>${pt.edgeName}</b>
+                  <span style="display:inline-block; width:12px; height:12px; background:${pt.edgeHex}; border-radius:2px; vertical-align:middle; margin-right:4px; border:1px solid #718096;"></span>
+                  <b>${pt.edgeName}</b> ${pt.edgeThick > 0 ? `<span style="color:#2b6cb0; font-weight:bold;">(${pt.edgeThick} мм)</span>` : ''}
                 </td>
                 <td>${edgeStrings.length ? edgeStrings.join(', ') : '<i>Няма кант</i>'}</td>
               </tr>
@@ -638,8 +675,7 @@ window.onload = () => {
         }
       }
 
-      // Финансов отчет в EUR
-      // Финансов отчет в EUR и общ брой детайли
+      // Финансов отчет
       let totalPartsCount = parts.length;
       let costHTML = `<h3 style="color:#2b6cb0; margin-bottom:12px;">💶 Подробна финансова спецификация</h3>`;
       
@@ -669,11 +705,7 @@ window.onload = () => {
       }
 
       costHTML += `</ul>
-        <h3 style="color:#2f855a; margin-top:12px; border-top:1px solid #cbd5e0; padding-top:8px;">ОБЩО ЗА МАТЕРИАЛИ: €${totalCostProject.toFixed(2)}</h3>
-        
-        <div style="margin-top: 20px; text-align: center; font-size: 0.85rem; color: #4a5568; border-top: 1px dashed #cbd5e0; padding-top: 10px;">
-          Системата е разработена с 💻 и ☕ от <b>инж. Иван Колев</b> | Всички права запазени © ${new Date().getFullYear()}
-        </div>`;
+        <h3 style="color:#2f855a; margin-top:12px; border-top:1px solid #cbd5e0; padding-top:8px;">ОБЩО ЗА МАТЕРИАЛИ: €${totalCostProject.toFixed(2)}</h3>`;
 
       const summaryBlock = document.createElement('div');
       summaryBlock.className = 'sheet-block';
