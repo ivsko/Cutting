@@ -3,179 +3,199 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Професионален Разкрой и Кантиране</title>
+  <meta name="claude:viewport-fit-sides" content="cover">
+  <title>Разкрой и Кантиране</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-  <div class="app-container">
-    <header class="app-header no-print">
-      <h1>Система за Разкрой, Кантове и Фладер</h1>
-      <p>Прецизно планиране, управление на кантове и генериране на разкройни карти</p>
+  <div class="app">
+    <header class="topbar no-print">
+      <div class="brand">
+        <h1>Разкрой и Кантиране</h1>
+        <p id="projectStatus">Проектът се пази автоматично в този браузър</p>
+      </div>
+      <div class="topbar-actions">
+        <label class="project-pick">Проект <select id="projectSelect"></select></label>
+        <input id="projectName" class="project-name" aria-label="Име на проекта" placeholder="Име на проекта">
+        <button id="newProject" class="btn btn-primary" type="button">+ Нов проект</button>
+        <button id="deleteProject" class="btn" type="button">Изтрий</button>
+        <button id="loadSample" class="btn" type="button">Пример</button>
+        <button id="exportProject" class="btn" type="button" data-file-action>Запази файл</button>
+        <label class="btn file-btn" data-file-action>Отвори файл<input id="importProject" type="file" accept=".json,application/json" hidden></label>
+        <button id="copyProject" class="btn" type="button" data-copy-action hidden>Копирай проекта</button>
+      </div>
     </header>
 
-    <!-- 1. БАЗА ДАННИ ЗА МАТЕРИАЛИ -->
-    <section class="panel no-print">
-      <h2>1. База материали (Плоскости и Кантове)</h2>
-      <div class="grid-2-col">
-        
-        <!-- Добавяне на Плоскост -->
-        <div class="sub-panel">
-          <h3>📦 Видове Плоскости (Плочи)</h3>
-          <div class="form-row">
-            <div class="form-group flex-2">
-              <label>Наименование / Декор:</label>
-              <input type="text" id="boardColorInput" value="ДЪБ СОНОМА">
-            </div>
-            <div class="form-group">
-              <label>Цвят:</label>
-              <input type="color" id="boardHexInput" value="#d2b48c" class="color-picker">
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Ширина (мм):</label>
-              <input type="number" id="boardWInput" value="2800">
-            </div>
-            <div class="form-group">
-              <label>Височина (мм):</label>
-              <input type="number" id="boardHInput" value="2070">
-            </div>
-          </div>
-          <div class="form-group">
-            <label>Фладер (Текстура):</label>
-            <button type="button" id="boardGrainToggle" class="toggle-btn active">↔ Има фладер (по ширина)</button>
-          </div>
-          <button id="addBoardDefBtn" class="btn btn-secondary btn-sm">+ Добави Плоскост</button>
-          
-          <table class="data-table" id="boardsTable">
-            <thead>
-              <tr><th>Цвят</th><th>Декор</th><th>Размер</th><th>Фладер</th><th></th></tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
+    <nav class="steps no-print" aria-label="Стъпки">
+      <button class="step" type="button" data-view="materials"><i>1</i>Материали</button>
+      <button class="step" type="button" data-view="parts"><i>2</i>Детайли <span id="partsBadge" class="badge"></span></button>
+      <button class="step" type="button" data-view="results"><i>3</i>Разкрой <span id="sheetsBadge" class="badge"></span></button>
+    </nav>
 
-        <!-- Добавяне на Кант -->
-        <div class="sub-panel">
-          <h3>📐 Видове Кантове</h3>
-          <div class="form-row">
-            <div class="form-group flex-2">
-              <label>Наименование / Декор:</label>
-              <input type="text" id="edgeColorInput" value="ОРЕХ 2mm">
-            </div>
-            <div class="form-group">
-              <label>Цвят:</label>
-              <input type="color" id="edgeHexInput" value="#8b4513" class="color-picker">
-            </div>
-            <div class="form-group">
-              <label>Дебелина (мм):</label>
-              <input type="number" id="edgeThickInput" value="2" step="0.5">
-            </div>
-          </div>
-          <button id="addEdgeDefBtn" class="btn btn-secondary btn-sm">+ Добави Кант</button>
-
-          <table class="data-table" id="edgesTable">
-            <thead>
-              <tr><th>Цвят</th><th>Декор</th><th>Дебелина</th><th></th></tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- 2. ВЪВЕЖДАНЕ НА ДЕТАЙЛ -->
-    <section class="panel no-print">
-      <h2>2. Въвеждане на детайл</h2>
-      <div class="grid-2-col">
-        
-        <div>
-          <div class="form-row">
-            <div class="form-group flex-2">
-              <label>Плоскост (Материал):</label>
-              <select id="partBoardSelect"></select>
-            </div>
-            <div class="form-group flex-2">
-              <label>Кант:</label>
-              <select id="partEdgeSelect"></select>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Ширина (мм):</label>
-              <input type="number" id="partWidth" value="800">
-            </div>
-            <div class="form-group">
-              <label>Височина (мм):</label>
-              <input type="number" id="partHeight" value="500">
-            </div>
-            <div class="form-group">
-              <label>Брой:</label>
-              <input type="number" id="partCount" value="2" min="1">
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>Завъртане на детайла при разкрой:</label>
-            <button type="button" id="partRotateToggle" class="toggle-btn active">🔓 Разрешено въртене</button>
-          </div>
-
-          <h4>Позиция на кантовете:</h4>
-          <div class="edges-selection-grid">
-            <label><input type="checkbox" id="edgeTop" checked> Ш1 (Горе)</label>
-            <label><input type="checkbox" id="edgeBottom" checked> Ш2 (Долу)</label>
-            <label><input type="checkbox" id="edgeLeft"> В1 (Ляво)</label>
-            <label><input type="checkbox" id="edgeRight"> В2 (Дясно)</label>
-          </div>
-
-          <button id="addPart" class="btn btn-primary">➕ Добави детайл в списъка</button>
-        </div>
-
-        <div class="preview-box">
-          <h4>Визуализация на детайла (С Кант)</h4>
-          <canvas id="partPreviewCanvas" width="300" height="200"></canvas>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- 3. СПИСЪК С ДЕТАЙЛИ -->
-    <section class="panel no-print">
-      <h2>3. Списък с детайли за разкрой</h2>
-      <ul id="partsList" class="parts-list"></ul>
-    </section>
-    
-    <!-- 4. КОНТРОЛ НА РАЗКРОЯ -->
-    <section class="panel highlight-panel no-print">
-      <div class="cutting-controls">
-        <div class="form-row-inline">
-          <label><strong>Ширина на диска / срез (мм):</strong></label>
-          <input type="number" id="kerf" value="4" min="0" max="10" style="width: 70px;">
-        </div>
-        <button id="runCutting" class="btn btn-success btn-large">✂️ Генерирай Разкрой</button>
-        <button id="clearAllParts" class="btn">🗑️ Изчисти всичко</button>
-      </div>
-    </section>
-
-    <!-- 5. ЕДИНСТВЕНА СЕКЦИЯ ЗА ПЕЧАТ / ЕКСПОРТ -->
-    <section class="panel print-area" id="printArea">
-      <div class="results-header no-print">
-        <h2>5. Карти за Разкрой</h2>
-        <button id="exportPDF" class="btn btn-secondary">🖨️ Печат / PDF (Само Картите)</button>
-      </div>
-      <div id="sheetsContainer" class="sheets-container">
-        <p class="placeholder-text no-print">Натиснете "Генерирай Разкрой", за да се покажат разкройните карти тук.</p>
-      </div>
-    </section>
-   
-    <div style="text-align: center; padding: 15px; margin-top: 20px; font-size: 0.85rem; color: #718096; border-top: 1px solid #e2e8f0;">
-      Разработено от <b>инж. Иван Колев</b> © 2026
+    <div id="progress" class="progress no-print" hidden>
+      <div class="progress-track"><div id="progressBar"></div></div>
+      <div class="progress-row"><span id="progressText" aria-live="polite"></span><button id="stopSearch" class="btn btn-quiet" type="button">Стоп</button></div>
     </div>
-  </div>
 
+    <!-- 1. МАТЕРИАЛИ -->
+    <div class="view materials-grid no-print" id="view-materials">
+      <section class="panel wide">
+        <h2>Плоскости</h2>
+        <div class="table-scroll"><table class="data-table" id="boardsTable">
+          <thead><tr><th>Цвят</th><th>Декор</th><th class="num">Ширина, мм</th><th class="num">Височина, мм</th><th>Фладер</th><th class="num">€ за лист</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <button id="addBoardDefBtn" class="btn" type="button">+ Добави плоскост</button>
+      </section>
+      <section class="panel">
+        <h2>Кантове</h2>
+        <div class="table-scroll"><table class="data-table" id="edgesTable">
+          <thead><tr><th>Цвят</th><th>Декор</th><th class="num">Дебелина, мм</th><th class="num">€ за метър</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <button id="addEdgeDefBtn" class="btn" type="button">+ Добави кант</button>
+      </section>
+      <section class="panel">
+        <h2>Склад остатъци <span id="stockCount" class="count"></span></h2>
+        <p class="hint">Разкроят ползва първо тези парчета и едва после отваря нов лист.</p>
+        <div class="table-scroll"><table class="data-table" id="stockTable">
+          <thead><tr><th>Плоскост</th><th class="num">Ширина</th><th class="num">Височина</th><th class="num">Брой</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <button id="addStock" class="btn" type="button">+ Добави остатък</button>
+      </section>
+    </div>
+
+    <!-- 2. ДЕТАЙЛИ -->
+    <div class="view workspace no-print" id="view-parts">
+      <section class="panel" aria-labelledby="partsHeading">
+        <div class="panel-head">
+          <h2 id="partsHeading">Нов детайл</h2>
+        </div>
+        <form id="partForm" class="part-form">
+          <div class="form-fields">
+            <div class="field span-2"><label for="partLabel">Име (по желание)</label><input id="partLabel" placeholder="напр. Страница"></div>
+            <div class="field"><label for="partWidth">Ширина, мм</label><input id="partWidth" type="number" min="1" step="0.1" value="800" required></div>
+            <div class="field"><label for="partHeight">Височина, мм</label><input id="partHeight" type="number" min="1" step="0.1" value="500" required></div>
+            <div class="field"><label for="partCount">Брой</label><input id="partCount" type="number" min="1" value="2" required></div>
+            <div class="field span-2"><label for="partBoardSelect">Плоскост</label><select id="partBoardSelect"></select></div>
+            <div class="field span-2" id="orientField"><label for="partOrient">Завъртане при разкрой</label><select id="partOrient"></select></div>
+            <div class="form-actions span-3">
+              <button id="addPart" class="btn btn-primary" type="submit">Добави детайл</button>
+              <button id="cancelEdit" class="btn" type="button" hidden>Откажи</button>
+            </div>
+          </div>
+          <fieldset class="edge-picker">
+            <legend>Кант: щракни страна на детайла</legend>
+            <div class="edge-tools">
+              <select id="partEdgeSelect" aria-label="Вид кант"></select>
+              <button id="edgesAll" class="btn" type="button">Всички</button>
+              <button id="edgesNone" class="btn" type="button">Без</button>
+            </div>
+            <div class="edge-diagram">
+              <button type="button" class="edge-side side-top" data-side="top"></button>
+              <button type="button" class="edge-side side-left" data-side="left"></button>
+              <canvas id="partPreviewCanvas" width="220" height="120" aria-label="Преглед на детайла"></canvas>
+              <button type="button" class="edge-side side-right" data-side="right"></button>
+              <button type="button" class="edge-side side-bottom" data-side="bottom"></button>
+            </div>
+          </fieldset>
+        </form>
+
+        <div class="panel-head list-head">
+          <h2>Списък с детайли</h2>
+          <div class="panel-tools">
+            <button id="openPaste" class="btn btn-quiet" type="button">Постави от Excel</button>
+            <button id="exportCsv" class="btn btn-quiet" type="button">Копирай за Excel</button>
+            <button id="clearAllParts" class="btn btn-quiet btn-danger-text" type="button">Изчисти</button>
+          </div>
+        </div>
+        <div id="pastePanel" class="paste-panel" hidden>
+          <label for="pasteText">Един детайл на ред: име, ширина, височина, брой. Новите редове получават избраните по-горе плоскост и кант.</label>
+          <textarea id="pasteText" rows="5" placeholder="Страница;720;560;2&#10;Рафт;764;320;4"></textarea>
+          <div class="form-actions">
+            <button id="applyPaste" class="btn btn-primary" type="button">Добави редовете</button>
+            <button id="closePaste" class="btn" type="button">Затвори</button>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table class="data-table parts-table">
+            <thead>
+              <tr><th>Име</th><th class="num">Ширина</th><th class="num">Височина</th><th class="num">Брой</th><th>Плоскост</th><th>Кант</th><th>Завъртане</th><th></th></tr>
+            </thead>
+            <tbody id="partsList"></tbody>
+          </table>
+        </div>
+        <p id="partsEmpty" class="empty">Няма детайли. Добави първия от формата по-горе.</p>
+      </section>
+
+      <section class="panel run-panel" aria-labelledby="runHeading">
+        <h2 id="runHeading">Готов ли е списъкът?</h2>
+        <p id="runSummary" class="hint"></p>
+        <div class="settings-grid">
+          <div class="field"><label for="kerf">Диск, мм</label><input id="kerf" type="number" min="0" max="12" step="0.1" value="4"></div>
+          <div class="field"><label for="trim">Обрез на край, мм</label><input id="trim" type="number" min="0" max="100" step="1" value="0"></div>
+        </div>
+        <button id="runCutting" class="btn btn-go" type="button">Генерирай разкрой</button>
+        <details class="more">
+          <summary>Още настройки</summary>
+          <div class="settings-grid">
+            <div class="field"><label for="priority">Приоритет</label>
+              <select id="priority"><option value="waste">Цели остатъци</option><option value="cuts">По-малко резове</option></select>
+            </div>
+            <div class="field"><label for="searchTime">Търсене</label>
+              <select id="searchTime"><option value="1500">Бързо, 1,5 с</option><option value="4000" selected>Нормално, 4 с</option><option value="15000">Задълбочено, 15 с</option></select>
+            </div>
+            <div class="field"><label for="minOffcut">Мин. остатък, мм</label><input id="minOffcut" type="number" min="0" step="10" value="150"></div>
+            <div class="field"><label for="edgeAllowance">Запас кант, %</label><input id="edgeAllowance" type="number" min="0" max="100" step="1" value="10"></div>
+          </div>
+        </details>
+      </section>
+    </div>
+
+    <!-- 3. РАЗКРОЙ -->
+    <div class="view results-view" id="view-results">
+      <div id="resultsEmpty" class="panel empty-results no-print">
+        <h2>Още няма разкрой</h2>
+        <p class="hint">Добави детайли и натисни „Генерирай разкрой“.</p>
+        <button id="goParts" class="btn btn-primary" type="button">Към детайлите</button>
+      </div>
+      <section class="results" id="resultsSection" hidden>
+        <div class="results-head no-print">
+          <h2>Карти за разкрой</h2>
+          <div class="panel-tools">
+            <button id="improve" class="btn" type="button" title="Търси още, без да мести заключените детайли">Търси по-добро</button>
+            <button id="saveOffcuts" class="btn" type="button">Прибери остатъците в склада</button>
+            <button id="exportPDF" class="btn btn-primary" type="button" data-file-action>Печат / PDF</button>
+          </div>
+        </div>
+        <div id="staleBanner" class="banner banner-warn no-print" hidden>Списъкът или настройките са променени след този разкрой. <button id="rerun" class="link-btn" type="button">Генерирай отново</button></div>
+        <div id="problems" class="no-print"></div>
+        <div id="kpis" class="kpis"></div>
+
+        <div id="editorBar" class="editor-bar no-print">
+          <div class="editor-buttons">
+            <button id="undo" class="btn" type="button" title="Ctrl+Z">↶ Назад</button>
+            <button id="redo" class="btn" type="button" title="Ctrl+Y">↷ Напред</button>
+            <button id="addSheet" class="btn" type="button">+ Празен лист</button>
+            <label class="check"><input id="showCuts" type="checkbox" checked> Покажи резовете</label>
+            <label class="check"><input id="snapOn" type="checkbox" checked> Залепване</label>
+          </div>
+          <span class="editor-tip">Щракни детайл, за да го завъртиш или заключиш. Влачи го, за да го преместиш.</span>
+        </div>
+
+        <div id="sheetsContainer" class="sheets"></div>
+        <div id="costBlock" class="cost-block"></div>
+      </section>
+    </div>
+
+    <footer class="credit no-print">Разработено от <b>инж. Иван Колев</b> © 2026</footer>
+  </div>
+  <div id="toast" class="toast no-print" role="status" hidden></div>
+
+  <script src="optimizer.js"></script>
   <script src="main.js"></script>
 </body>
 </html>

@@ -1,12 +1,12 @@
 {
-  "name": "vite-starter",
-  "version": "0.0.0",
+  "name": "cutting",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "build": "node scripts/build-single.mjs",
+    "test": "node tests/optimizer.test.mjs"
   },
   "devDependencies": {
     "vite": "^7.3.1"
