@@ -318,6 +318,9 @@ tr.missing td { background: var(--bad-bg); }
 .spec-board { margin: 12px 0 2px; font-size: .95rem; font-weight: 600; }
 .dim-text { paint-order: normal; }
 
+.edge-item { display: block; white-space: nowrap; }
+.edge-item b { font-family: var(--mono); }
+
 @media print {
   :root, :root:not([data-theme="light"]) {
     --bg: #fff; --surface: #fff; --surface-2: #fff; --fg: #000; --muted: #333; --line: #bbb; --line-strong: #777; --cut: #b00045; --offcut: #0b6636; color-scheme: light;
@@ -344,8 +347,9 @@ tr.missing td { background: var(--bad-bg); }
   body.print-spec .spec-block { break-before: auto; }
   .spec-table td { white-space: normal; }
   .spec-board { break-after: avoid; }
+  .edge-item { display: inline; margin-right: 10px; }
   .spec-table tr { break-inside: avoid; }
-  .sheet svg { max-height: 128mm; }
+  .sheet svg { max-height: 122mm; }
   .cut-list { max-height: none; overflow: visible; column-gap: 8px; }
   .parts-detail { break-before: avoid; }
   .parts-detail summary { display: none; }

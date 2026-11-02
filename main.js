@@ -7,7 +7,6 @@
   const OLD_STORE_KEY = 'cutting.project.v2';
   const PROJECT_FIELDS = ['id', 'name', 'parts', 'settings', 'layout', 'layoutSignature', 'updated'];
   const SIDES = ['top', 'right', 'bottom', 'left'];
-  const SIDE_LABEL = { top: 'Ш1', bottom: 'Ш2', left: 'В1', right: 'В2' };
   const $ = (id) => document.getElementById(id);
 
   const esc = (v) =>
@@ -545,9 +544,8 @@
   }
 
   function edgeText(p) {
-    const parts = ['top', 'bottom', 'left', 'right'].filter((s) => edge(p.edges[s])).map((s) => SIDE_LABEL[s]);
-    if (!parts.length) return 'без кант';
-    return parts.length === 4 ? 'всички' : parts.join(' ');
+    const list = edgeGroups(p);
+    return list.length ? list.map((g) => `по ${mm(g.len)} × ${g.n}`).join(', ') : 'без кант';
   }
 
   function isShort(p) {
@@ -586,11 +584,13 @@
   let previewBox = null;
 
   function renderEdgeButtons() {
-    const names = { top: 'Ш1 горе', bottom: 'Ш2 долу', left: 'В1 ляво', right: 'В2 дясно' };
+    const w = mm(+$('partWidth').value || 0);
+    const h = mm(+$('partHeight').value || 0);
+    const lens = { top: w, bottom: w, left: h, right: h };
     document.querySelectorAll('.edge-side').forEach((b) => {
       const k = b.dataset.side;
       const e = edge(formEdges[k]);
-      b.textContent = names[k] + (e ? ' ✓' : '');
+      b.textContent = lens[k] + (e ? ' ✓' : '');
       b.classList.toggle('on', !!e);
       b.setAttribute('aria-pressed', e ? 'true' : 'false');
       b.title = e ? e.name : 'Без кант';
@@ -757,7 +757,7 @@
       out += '</g>';
     });
 
-    const GAP = 2.5; // Видима празнина, за да не се сливат кантовете на съседни детайли.
+    const GAP = 1; // Видима празнина, за да не се сливат кантовете на съседни детайли.
     sh.parts.forEach((p) => {
       const info = placementInfo(p);
       const x = px(p.x) + GAP;
@@ -775,7 +775,7 @@
       let band = 0;
       if (info) {
         band = Math.max(3, Math.min(5, Math.min(w, h) * 0.07));
-        const inset = 3.5;
+        const inset = 2.5;
         const corner = Math.min(9, Math.min(w, h) * 0.12);
         for (const side of SIDES) {
           const e = edge(info.part.edges[side]);
@@ -796,7 +796,7 @@
       const halo = `paint-order="stroke" stroke="${ink === '#111' ? 'rgba(255,255,255,.8)' : 'rgba(0,0,0,.5)'}" stroke-width="2.5"`;
       const cx = x + w / 2;
       const cy = y + h / 2;
-      const room = 3.5 + band + 3;
+      const room = 2.5 + band + 3;
       const big = w >= 90 && h >= 58;
       out += `<g pointer-events="none" font-family="IBM Plex Mono,monospace" fill="${ink}" text-anchor="middle">`;
       if (big) {
@@ -845,11 +845,29 @@
     return out + '</svg>';
   }
 
-  function edgeCell(part, side) {
-    const e = edge(part.edges[side]);
-    if (!e) return '<span class="no-edge">–</span>';
-    return `<span class="swatch" style="background:${esc(e.hex)}"></span> ${esc(e.name)}`;
+  /** Кантът по размер: страните с еднаква дължина и еднакъв кант са заедно. */
+  function edgeGroups(part) {
+    const groups = new Map();
+    for (const s of ['top', 'bottom', 'left', 'right']) {
+      const e = edge(part.edges[s]);
+      if (!e) continue;
+      const len = s === 'top' || s === 'bottom' ? part.w : part.h;
+      const k = len + '|' + e.id;
+      if (!groups.has(k)) groups.set(k, { len, e, n: 0 });
+      groups.get(k).n++;
+    }
+    return [...groups.values()].sort((a, b) => b.len - a.len);
   }
+
+  function edgeCell(part) {
+    const list = edgeGroups(part);
+    if (!list.length) return '<span class="no-edge">без кант</span>';
+    return list
+      .map((g) => `<span class="edge-item">по <b>${mm(g.len)}</b> × ${g.n} <span class="swatch" style="background:${esc(g.e.hex)}"></span> ${esc(g.e.name)}</span>`)
+      .join('');
+  }
+
+  const edgeTextPlain = (part) => edgeGroups(part).map((g) => `по ${mm(g.len)} × ${g.n} ${g.e.name}`).join('; ');
 
   const edgeMetersOf = (part) => SIDES.reduce((m, s) => (edge(part.edges[s]) ? m + (s === 'top' || s === 'bottom' ? part.w : part.h) / 1000 : m), 0);
 
@@ -867,7 +885,7 @@
       .sort((a, b) => posOf(a.p.partId) - posOf(b.p.partId))
       .map(({ p, n, ids }) => {
         const info = placementInfo(p);
-        if (!info) return `<tr><td colspan="10">Детайлът е изтрит от списъка (${n} бр.)</td></tr>`;
+        if (!info) return `<tr><td colspan="7">Детайлът е изтрит от списъка (${n} бр.)</td></tr>`;
         const part = info.part;
         return `<tr class="${ids.includes(selectedId) ? 'is-selected' : ''}">
           <td class="num"><b>${posOf(p.partId)}</b></td><td>${esc(part.label) || '–'}</td>
@@ -875,11 +893,11 @@
           <td class="num"><b>${mm(p.w)} × ${mm(p.h)}</b></td>
           <td class="num">${mm(part.w)} × ${mm(part.h)}</td>
           <td>${p.rot ? 'завъртян ↻' : 'както е въведен'}</td>
-          <td>${edgeCell(part, 'top')}</td><td>${edgeCell(part, 'bottom')}</td><td>${edgeCell(part, 'left')}</td><td>${edgeCell(part, 'right')}</td></tr>`;
+          <td>${edgeCell(part)}</td></tr>`;
       })
       .join('');
     return `<details class="parts-detail" data-print open><summary>Детайли на листа (${sh.parts.length} бр.)</summary>
-      <div class="table-scroll"><table class="data-table spec-table"><thead><tr><th class="num">Поз.</th><th>Име</th><th class="num">Брой</th><th class="num">Рязане (на листа)</th><th class="num">Краен размер</th><th>Положение</th><th>Ш1 горе</th><th>Ш2 долу</th><th>В1 ляво</th><th>В2 дясно</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
+      <div class="table-scroll"><table class="data-table spec-table"><thead><tr><th class="num">Поз.</th><th>Име</th><th class="num">Брой</th><th class="num">Рязане (на листа)</th><th class="num">Краен размер</th><th>Положение</th><th>Кант</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
   }
 
   // ==========================================================================
@@ -927,13 +945,13 @@
               <td class="num">${mm(p.w)} × ${mm(p.h)}</td>
               <td class="num"><b>${mm(c.w)} × ${mm(c.h)}</b></td>
               <td>${p.allowRotate ? 'Завъртане' : 'Без завъртане'}</td>
-              <td>${edgeCell(p, 'top')}</td><td>${edgeCell(p, 'bottom')}</td><td>${edgeCell(p, 'left')}</td><td>${edgeCell(p, 'right')}</td>
+              <td>${edgeCell(p)}</td>
               <td class="num">${fmt(edgeMetersOf(p) * p.qty)}</td></tr>`;
           })
           .join('');
         return `<h4 class="spec-board"><span class="swatch" style="background:${esc(b.hex)}"></span> ${esc(b.name)}, лист ${mm(b.w)} × ${mm(b.h)} мм${b.hasGrain ? ', с фладер по ширината на листа' : ''}</h4>
-          <div class="table-scroll"><table class="data-table spec-table"><thead><tr><th class="num">Поз.</th><th>Име</th><th class="num">Брой</th><th class="num">Краен размер Ш × В</th><th class="num">Размер за рязане</th><th>Завъртане</th><th>Ш1 горе</th><th>Ш2 долу</th><th>В1 ляво</th><th>В2 дясно</th><th class="num">Кант, м</th></tr></thead>
-          <tbody>${body}<tr class="spec-sum"><td colspan="2">Общо за ${esc(b.name)}</td><td class="num">${totalQty}</td><td colspan="7" class="num">Площ на детайлите ${fmt(area)} m²</td><td class="num">${fmt(rows.reduce((n, p) => n + edgeMetersOf(p) * p.qty, 0))}</td></tr></tbody></table></div>`;
+          <div class="table-scroll"><table class="data-table spec-table"><thead><tr><th class="num">Поз.</th><th>Име</th><th class="num">Брой</th><th class="num">Краен размер</th><th class="num">Размер за рязане</th><th>Завъртане</th><th>Кант</th><th class="num">Кант, м</th></tr></thead>
+          <tbody>${body}<tr class="spec-sum"><td colspan="2">Общо за ${esc(b.name)}</td><td class="num">${totalQty}</td><td colspan="4" class="num">Площ на детайлите ${fmt(area)} m²</td><td class="num">${fmt(rows.reduce((n, p) => n + edgeMetersOf(p) * p.qty, 0))}</td></tr></tbody></table></div>`;
       })
       .join('');
 
@@ -953,20 +971,19 @@
           <button class="btn" type="button" id="printSpec" data-file-action${SANDBOXED ? ' hidden' : ''}>Печат само на спецификацията</button>
         </div>
       </div>
-      <p class="spec-meta">Диск ${mm(kerf)} мм${trim ? `, обрез ${mm(trim)} мм от всеки край` : ''}. Крайният размер е с кант. Размерът за рязане е намален с дебелината на канта. Ш1 и Ш2 са страните по ширината, В1 и В2 по височината.</p>
+      <p class="spec-meta">Диск ${mm(kerf)} мм${trim ? `, обрез ${mm(trim)} мм от всеки край` : ''}. Крайният размер е с кант. Размерът за рязане е намален с дебелината на канта. „По 720 × 2“ значи две страни с дължина 720 мм.</p>
       ${tables}
       <h4 class="spec-board">Общо материали</h4>
       <div class="table-scroll"><table class="data-table spec-table"><thead><tr><th>Материал</th><th class="num">Размер / дебелина</th><th class="num">Количество</th></tr></thead><tbody>${summary}</tbody></table></div>`;
   }
 
   function specTsv() {
-    const head = ['Поз.', 'Име', 'Плоскост', 'Брой', 'Краен Ш', 'Краен В', 'Рязане Ш', 'Рязане В', 'Завъртане', 'Ш1 горе', 'Ш2 долу', 'В1 ляво', 'В2 дясно', 'Кант, м'];
+    const head = ['Поз.', 'Име', 'Плоскост', 'Брой', 'Крайна ширина', 'Крайна височина', 'Ширина за рязане', 'Височина за рязане', 'Завъртане', 'Кант', 'Кант, м'];
     const n = (v) => String(Math.round(v * 100) / 100).replace('.', ',');
     const rows = state.parts.map((p) => {
       const c = cutSize(p);
-      const side = (s) => (edge(p.edges[s]) ? edge(p.edges[s]).name : '');
       const b = board(p.boardId);
-      return [posOf(p.id), p.label, b ? b.name : '', p.qty, n(p.w), n(p.h), n(c.w), n(c.h), p.allowRotate ? 'Завъртане' : 'Без завъртане', side('top'), side('bottom'), side('left'), side('right'), n(edgeMetersOf(p) * p.qty)].join('\t');
+      return [posOf(p.id), p.label, b ? b.name : '', p.qty, n(p.w), n(p.h), n(c.w), n(c.h), p.allowRotate ? 'Завъртане' : 'Без завъртане', edgeTextPlain(p), n(edgeMetersOf(p) * p.qty)].join('\t');
     });
     return [head.join('\t'), ...rows].join('\n');
   }
@@ -1759,11 +1776,10 @@
   const projectFileName = () => (state.name || 'razkroy').replace(/[^\p{L}\p{N}_-]+/gu, '_') + '.json';
 
   function csvText() {
-    const head = 'Име;Ширина;Височина;Брой;Плоскост;Ш1;Ш2;В1;В2';
+    const head = 'Име;Ширина;Височина;Брой;Плоскост;Кант';
     const rows = state.parts.map((p) => {
       const b = board(p.boardId);
-      const n = (s) => (edge(p.edges[s]) ? edge(p.edges[s]).name : '');
-      return [p.label, p.w, p.h, p.qty, b ? b.name : '', n('top'), n('bottom'), n('left'), n('right')].join(';');
+      return [p.label, p.w, p.h, p.qty, b ? b.name : '', edgeTextPlain(p)].join(';');
     });
     return [head, ...rows].join('\n');
   }
@@ -1960,6 +1976,7 @@
     ['partWidth', 'partHeight', 'partBoardSelect', 'partOrient'].forEach((id) =>
       $(id).addEventListener('input', () => {
         if (id === 'partBoardSelect') renderOrient(true);
+        renderEdgeButtons();
         updatePreview();
       })
     );
