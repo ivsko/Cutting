@@ -11,28 +11,38 @@
 </head>
 <body>
   <div class="app">
-    <header class="topbar no-print">
+    <aside class="sidebar no-print">
       <div class="brand">
         <h1>Разкрой и Кантиране</h1>
-        <p id="projectStatus">Проектът се пази автоматично в този браузър</p>
       </div>
+      <nav class="steps" aria-label="Стъпки">
+        <button class="step" type="button" data-view="materials"><i>1</i><span>Материали</span></button>
+        <button class="step" type="button" data-view="parts"><i>2</i><span>Детайли</span> <span id="partsBadge" class="badge"></span></button>
+        <button class="step" type="button" data-view="results"><i>3</i><span>Разкрой</span> <span id="sheetsBadge" class="badge"></span></button>
+      </nav>
+      <div class="side-projects">
+        <div class="side-head"><h2>Проекти</h2><button id="newProject" class="btn btn-soft" type="button">+ Нов</button></div>
+        <div id="projectList" class="project-list"></div>
+        <p id="projectStatus" class="side-note"></p>
+      </div>
+      <div class="theme-switch" role="group" aria-label="Тема">
+        <button type="button" data-theme-set="light">Светла</button>
+        <button type="button" data-theme-set="dark">Тъмна</button>
+      </div>
+      <footer class="credit">Разработено от <b>инж. Иван Колев</b> © 2026</footer>
+    </aside>
+
+    <main class="main">
+    <header class="topbar no-print">
+      <input id="projectName" class="project-name" aria-label="Име на проекта" placeholder="Име на проекта">
       <div class="topbar-actions">
-        <label class="project-pick">Проект <select id="projectSelect"></select></label>
-        <input id="projectName" class="project-name" aria-label="Име на проекта" placeholder="Име на проекта">
-        <button id="newProject" class="btn btn-primary" type="button">+ Нов проект</button>
-        <button id="deleteProject" class="btn" type="button">Изтрий</button>
-        <button id="loadSample" class="btn" type="button">Пример</button>
-        <button id="exportProject" class="btn" type="button" data-file-action>Запази файл</button>
-        <label class="btn file-btn" data-file-action>Отвори файл<input id="importProject" type="file" accept=".json,application/json" hidden></label>
-        <button id="copyProject" class="btn" type="button" data-copy-action hidden>Копирай проекта</button>
+        <button id="loadSample" class="btn btn-quiet" type="button">Зареди пример</button>
+        <button id="exportProject" class="btn btn-quiet" type="button" data-file-action>Запази файл</button>
+        <label class="btn btn-quiet file-btn" data-file-action>Отвори файл<input id="importProject" type="file" accept=".json,application/json" hidden></label>
+        <button id="copyProject" class="btn btn-quiet" type="button" data-copy-action hidden>Копирай проекта</button>
+        <button id="deleteProject" class="btn btn-quiet btn-danger-text" type="button">Изтрий</button>
       </div>
     </header>
-
-    <nav class="steps no-print" aria-label="Стъпки">
-      <button class="step" type="button" data-view="materials"><i>1</i>Материали</button>
-      <button class="step" type="button" data-view="parts"><i>2</i>Детайли <span id="partsBadge" class="badge"></span></button>
-      <button class="step" type="button" data-view="results"><i>3</i>Разкрой <span id="sheetsBadge" class="badge"></span></button>
-    </nav>
 
     <div id="progress" class="progress no-print" hidden>
       <div class="progress-track"><div id="progressBar"></div></div>
@@ -175,6 +185,7 @@
         <div id="staleBanner" class="banner banner-warn no-print" hidden>Списъкът или настройките са променени след този разкрой. <button id="rerun" class="link-btn" type="button">Генерирай отново</button></div>
         <div id="problems" class="no-print"></div>
         <div id="kpis" class="kpis"></div>
+        <div id="sheetRail" class="sheet-rail no-print" aria-label="Листове"></div>
 
         <div id="editorBar" class="editor-bar no-print">
           <div class="editor-buttons">
@@ -193,7 +204,7 @@
       </section>
     </div>
 
-    <footer class="credit no-print">Разработено от <b>инж. Иван Колев</b> © 2026</footer>
+    </main>
   </div>
   <div id="toast" class="toast no-print" role="status" hidden></div>
 

@@ -160,10 +160,13 @@
     const list = Object.values(library.projects).sort((a, b) => (b.updated || 0) - (a.updated || 0));
     if (state.id && !library.projects[state.id]) list.unshift(projectRecord());
     const when = (t) => (t ? new Date(t).toLocaleDateString('bg-BG', { day: '2-digit', month: '2-digit' }) : '');
-    $('projectSelect').innerHTML = list
-      .map((p) => `<option value="${esc(p.id)}"${p.id === state.id ? ' selected' : ''}>${esc(p.name || 'Без име')} · ${when(p.updated)}</option>`)
+    $('projectList').innerHTML = list
+      .map((p) => {
+        const count = (p.parts || []).reduce((n, x) => n + (x.qty || 0), 0);
+        return `<button type="button" class="project-item${p.id === state.id ? ' active' : ''}" data-id="${esc(p.id)}"><span>${esc(p.name || 'Без име')}</span><small>${when(p.updated)} · ${count} дет.</small></button>`;
+      })
       .join('');
-    $('projectStatus').textContent = `${list.length} ${list.length === 1 ? 'проект' : 'проекта'}, записват се автоматично в този браузър`;
+    $('projectStatus').textContent = 'Записват се автоматично в този браузър.';
   }
 
   /** Импортираният файл става нов проект, а материалите му се добавят към базата. */
@@ -714,8 +717,8 @@
       return out;
     };
     const num = (x, y, text, rotate) =>
-      `<text x="${x}" y="${y}" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="17" font-weight="600" fill="#1c2733" class="dim-text"${rotate ? ` transform="rotate(-90 ${x} ${y})"` : ''}>${text}</text>`;
-    let out = '<g pointer-events="none" stroke="#1c2733" stroke-width="1" class="dims">';
+      `<text x="${x}" y="${y}" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="17" font-weight="600" fill="var(--fg)" class="dim-text"${rotate ? ` transform="rotate(-90 ${x} ${y})"` : ''}>${text}</text>`;
+    let out = '<g pointer-events="none" stroke="var(--fg)" stroke-width="1" class="dims">';
     for (const [p, q] of segments('V', region.x, region.w, region.h)) {
       const x1 = p * scale;
       const x2 = q * scale;
@@ -1024,7 +1027,7 @@
               <span class="swatch" style="background:${esc(b ? b.hex : '#ccc')}"></span>${esc(b ? b.name : 'Изтрита плоскост')}
               <span style="font-weight:400;color:var(--muted)">${mm(sh.w)} × ${mm(sh.h)} мм</span> ${kind} ${tag} ${grainTag}
             </div>
-            <div class="sheet-stats">Рандеман <b>${fmt(a.fill * 100, 1)}%</b> · Детайли <b>${sh.parts.length}</b> · Резове <b>${a.plan.cuts.length}</b>
+            <div class="sheet-stats"><span class="fillbar" aria-hidden="true"><i style="width:${Math.min(100, a.fill * 100)}%"></i></span> Рандеман <b>${fmt(a.fill * 100, 1)}%</b> · Детайли <b>${sh.parts.length}</b> · Резове <b>${a.plan.cuts.length}</b>
               <button class="btn btn-quiet no-print" type="button" data-pin-sheet>${allPinned ? 'Отключи листа' : 'Заключи листа'}</button>
             </div>
           </div>
@@ -1041,6 +1044,7 @@
       if (s in openState) d.open = openState[s];
     });
 
+    renderRail();
     renderKpis();
     renderCosts();
     renderSpec();
@@ -1049,6 +1053,21 @@
     $('undo').disabled = undoStack.length === 0;
     $('redo').disabled = redoStack.length === 0;
     $('staleBanner').hidden = state.layoutSignature === layoutSignature();
+  }
+
+  /** Малки прегледи на всички листове за бърз преход. */
+  function renderRail() {
+    let n = 0;
+    $('sheetRail').innerHTML = state.layout.sheets
+      .map((sh) => {
+        n++;
+        const b = board(sh.boardId);
+        const hex = b ? b.hex : '#ccc';
+        const used = sh.parts.reduce((t, p) => t + p.w * p.h, 0) / (sh.w * sh.h);
+        const rects = sh.parts.map((p) => `<rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" fill="${esc(hex)}" stroke="#2a3340" stroke-width="${sh.w / 180}"/>`).join('');
+        return `<button class="rail-item" type="button" data-go="${esc(sh.id)}" title="Към лист ${n}"><svg viewBox="0 0 ${sh.w} ${sh.h}" aria-hidden="true"><rect width="${sh.w}" height="${sh.h}" fill="#aab3bd"/>${rects}</svg><span>Лист ${n}<b>${fmt(used * 100, 0)}%</b></span></button>`;
+      })
+      .join('');
   }
 
   function renderKpis() {
@@ -1241,6 +1260,7 @@
   function renderBadges() {
     const count = state.parts.reduce((n, p) => n + p.qty, 0);
     $('partsBadge').textContent = count ? String(count) : '';
+    renderProjects();
     $('sheetsBadge').textContent = state.layout ? String(state.layout.sheets.filter((x) => x.parts.length).length) + ' л.' : '';
     const boards = new Set(state.parts.map((p) => p.boardId)).size;
     $('runSummary').textContent = count ? `${count} детайла от ${boards} вида плоскост.` : 'Списъкът е празен.';
@@ -1882,7 +1902,39 @@
     });
   }
 
+  const THEME_KEY = 'cutting.theme';
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    document.querySelectorAll('[data-theme-set]').forEach((b) => {
+      const on = b.dataset.themeSet === theme;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+
+  function initTheme() {
+    let saved = null;
+    try {
+      saved = localStorage.getItem(THEME_KEY);
+    } catch (_) {
+      /* Без хранилище темата важи само за сесията. */
+    }
+    applyTheme(saved || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+    document.querySelectorAll('[data-theme-set]').forEach((b) => {
+      b.onclick = () => {
+        applyTheme(b.dataset.themeSet);
+        try {
+          localStorage.setItem(THEME_KEY, b.dataset.themeSet);
+        } catch (_) {
+          /* Изборът просто няма да се запомни. */
+        }
+      };
+    });
+  }
+
   function init() {
+    initTheme();
     const hadData = load();
     if (!state.id) state.id = uid('prj');
 
@@ -2042,7 +2094,10 @@
       save();
       renderProjects();
     });
-    $('projectSelect').addEventListener('change', (e) => openProject(e.target.value));
+    $('projectList').addEventListener('click', (e) => {
+      const b = e.target.closest('.project-item');
+      if (b) openProject(b.dataset.id);
+    });
     $('newProject').onclick = () => {
       newProject('');
       save();
@@ -2111,6 +2166,12 @@
       toast('Добавен е празен лист. Влачи детайли върху него.');
     };
 
+    $('sheetRail').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-go]');
+      if (!b) return;
+      const el = document.querySelector(`[data-sheet-id="${CSS.escape(b.dataset.go)}"]`);
+      if (el) el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    });
     const container = $('sheetsContainer');
     container.addEventListener('pointerdown', onPointerDown);
     container.addEventListener('click', (e) => {
