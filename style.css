@@ -301,6 +301,23 @@ tr.missing td { background: var(--bad-bg); }
   .step .badge { display: none; }
 }
 
+/* Лист на цяла ширина и спецификации */
+.sheet-body { grid-template-columns: minmax(0, 1fr); }
+.parts-detail { margin-top: 14px; }
+.spec-table td { padding: 7px 8px; }
+.spec-table th { padding: 6px 8px; white-space: normal; }
+.spec-table td { white-space: nowrap; }
+.spec-table tbody tr:nth-child(even) td { background: var(--surface-2); }
+.spec-table .swatch { margin-right: 2px; }
+.no-edge { color: var(--muted); }
+.spec-sum td { font-weight: 600; border-top: 1.5px solid var(--line-strong); }
+.spec-block { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 16px; display: grid; gap: 8px; min-width: 0; }
+.spec-head { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: flex-start; }
+.spec-head h3 { font-size: 1.1rem; }
+.spec-meta { margin: 0; color: var(--muted); font-size: .84rem; }
+.spec-board { margin: 12px 0 2px; font-size: .95rem; font-weight: 600; }
+.dim-text { paint-order: normal; }
+
 @media print {
   :root, :root:not([data-theme="light"]) {
     --bg: #fff; --surface: #fff; --surface-2: #fff; --fg: #000; --muted: #333; --line: #bbb; --line-strong: #777; --cut: #b00045; --offcut: #0b6636; color-scheme: light;
@@ -319,9 +336,16 @@ tr.missing td { background: var(--bad-bg); }
   .cut-list ol { font-size: 8px; }
   .cut-list li { padding: 0 2px; }
   .data-table { font-size: 9.5px; }
-  .data-table td { padding: 1px 4px; }
-  .sheet-body { grid-template-columns: minmax(0, 1fr) 210px; gap: 8px; }
-  .sheet svg { max-height: 150mm; }
+  .data-table td, .spec-table td { padding: 3px 5px; }
+  .spec-table th { padding: 2px 5px; }
+  .parts-detail { margin-top: 5px; }
+  .spec-block { display: block; border: 0; padding: 0; break-before: page; }
+  body.print-spec .sheets, body.print-spec .cost-block { display: none !important; }
+  body.print-spec .spec-block { break-before: auto; }
+  .spec-table td { white-space: normal; }
+  .spec-board { break-after: avoid; }
+  .spec-table tr { break-inside: avoid; }
+  .sheet svg { max-height: 128mm; }
   .cut-list { max-height: none; overflow: visible; column-gap: 8px; }
   .parts-detail { break-before: avoid; }
   .parts-detail summary { display: none; }

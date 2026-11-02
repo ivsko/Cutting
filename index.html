@@ -168,6 +168,7 @@
           <div class="panel-tools">
             <button id="improve" class="btn" type="button" title="Търси още, без да мести заключените детайли">Търси по-добро</button>
             <button id="saveOffcuts" class="btn" type="button">Прибери остатъците в склада</button>
+            <label class="check" data-file-action><input id="printPrices" type="checkbox"> Цени в печата</label>
             <button id="exportPDF" class="btn btn-primary" type="button" data-file-action>Печат / PDF</button>
           </div>
         </div>
@@ -180,14 +181,15 @@
             <button id="undo" class="btn" type="button" title="Ctrl+Z">↶ Назад</button>
             <button id="redo" class="btn" type="button" title="Ctrl+Y">↷ Напред</button>
             <button id="addSheet" class="btn" type="button">+ Празен лист</button>
-            <label class="check"><input id="showCuts" type="checkbox" checked> Покажи резовете</label>
+            <label class="check"><input id="showCuts" type="checkbox"> Ред на рязане</label>
             <label class="check"><input id="snapOn" type="checkbox" checked> Залепване</label>
           </div>
           <span class="editor-tip">Щракни детайл, за да го завъртиш или заключиш. Влачи го, за да го преместиш.</span>
         </div>
 
         <div id="sheetsContainer" class="sheets"></div>
-        <div id="costBlock" class="cost-block"></div>
+        <div id="specBlock" class="spec-block"></div>
+        <div id="costBlock" class="cost-block no-print"></div>
       </section>
     </div>
 

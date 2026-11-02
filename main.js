@@ -673,6 +673,9 @@
   // ==========================================================================
 
   const SVG_W = 1000;
+  const SVG_M = 46; // Поле за размерните линии отгоре и отляво.
+
+  const posOf = (partId) => state.parts.findIndex((p) => p.id === partId) + 1;
 
   function textColorFor(hex) {
     const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
@@ -691,6 +694,43 @@
     return { collisions, plan, used, offcuts, fill: used / (sh.w * sh.h) };
   }
 
+  /** Размерни линии за главните резове, които минават през целия лист. */
+  function dimensionLines(sh, a, scale) {
+    const { kerf } = state.settings;
+    const region = E.usableRegion(sh);
+    const segments = (axis, start, length, across) => {
+      const cuts = a.plan.cuts
+        .filter((c) => c.axis === axis && c.len >= across * 0.75)
+        .map((c) => c.at)
+        .sort((p, q) => p - q);
+      if (!cuts.length) return [];
+      const out = [];
+      let from = start;
+      for (const c of cuts) {
+        if (c - from > 0.5) out.push([from, c]);
+        from = c + kerf;
+      }
+      if (start + length - from > 0.5) out.push([from, start + length]);
+      return out;
+    };
+    const num = (x, y, text, rotate) =>
+      `<text x="${x}" y="${y}" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="17" font-weight="600" fill="#1c2733" class="dim-text"${rotate ? ` transform="rotate(-90 ${x} ${y})"` : ''}>${text}</text>`;
+    let out = '<g pointer-events="none" stroke="#1c2733" stroke-width="1" class="dims">';
+    for (const [p, q] of segments('V', region.x, region.w, region.h)) {
+      const x1 = p * scale;
+      const x2 = q * scale;
+      out += `<line x1="${x1}" y1="-9" x2="${x2}" y2="-9"/><line x1="${x1}" y1="-16" x2="${x1}" y2="-2"/><line x1="${x2}" y1="-16" x2="${x2}" y2="-2"/>`;
+      if (x2 - x1 > 42) out += `<g stroke="none">${num((x1 + x2) / 2, -16, mm(q - p))}</g>`;
+    }
+    for (const [p, q] of segments('H', region.y, region.h, region.w)) {
+      const y1 = p * scale;
+      const y2 = q * scale;
+      out += `<line x1="-9" y1="${y1}" x2="-9" y2="${y2}"/><line x1="-16" y1="${y1}" x2="-2" y2="${y1}"/><line x1="-16" y1="${y2}" x2="-2" y2="${y2}"/>`;
+      if (y2 - y1 > 42) out += `<g stroke="none">${num(-16, (y1 + y2) / 2, mm(q - p), true)}</g>`;
+    }
+    return out + '</g>';
+  }
+
   function drawSheet(sh, index, a) {
     const b = board(sh.boardId);
     const scale = SVG_W / sh.w;
@@ -704,9 +744,11 @@
     const grainH = `<pattern id="${patId}-h" width="60" height="9" patternUnits="userSpaceOnUse"><path d="M0 3 Q15 1 30 4 T60 3" fill="none" stroke="rgba(70,40,10,.26)"/></pattern>`;
     const grainV = `<pattern id="${patId}-v" width="9" height="60" patternUnits="userSpaceOnUse"><path d="M3 0 Q1 15 4 30 T3 60" fill="none" stroke="rgba(70,40,10,.26)"/></pattern>`;
 
-    let out = `<svg viewBox="0 0 ${SVG_W} ${px(sh.h)}" data-sheet="${esc(sh.id)}" role="img" aria-label="Лист ${index + 1}, ${esc(b ? b.name : '')}"><defs>${grainH}${grainV}</defs>`;
+    let out = `<svg viewBox="${-SVG_M} ${-SVG_M} ${SVG_W + SVG_M} ${px(sh.h) + SVG_M}" data-sheet="${esc(sh.id)}" role="img" aria-label="Лист ${index + 1}, ${esc(b ? b.name : '')}"><defs>${grainH}${grainV}</defs>`;
     out += `<rect x="0" y="0" width="${SVG_W}" height="${px(sh.h)}" fill="#8f9aa5"/>`;
     if (b && b.hasGrain) out += `<rect x="0" y="0" width="${SVG_W}" height="${px(sh.h)}" fill="url(#${patId}-h)"/>`;
+
+    out += dimensionLines(sh, a, scale);
 
     a.offcuts.forEach((o) => {
       const big = o.w * scale > 70 && o.h * scale > 26;
@@ -715,51 +757,72 @@
       out += '</g>';
     });
 
-    sh.parts.forEach((p, i) => {
+    const GAP = 2.5; // Видима празнина, за да не се сливат кантовете на съседни детайли.
+    sh.parts.forEach((p) => {
       const info = placementInfo(p);
-      const x = px(p.x);
-      const y = px(p.y);
-      const w = px(p.w);
-      const h = px(p.h);
+      const x = px(p.x) + GAP;
+      const y = px(p.y) + GAP;
+      const w = Math.max(2, px(p.w) - 2 * GAP);
+      const h = Math.max(2, px(p.h) - 2 * GAP);
       const isSel = p.id === selectedId;
       const hasBad = stuck.has(p.id) || a.collisions.some((c) => c.id === p.id || c.other === p.id);
-      out += `<g class="part" data-part="${esc(p.id)}" tabindex="0" role="button" aria-label="Детайл ${i + 1}, ${mm(p.w)} на ${mm(p.h)} мм">`;
+      const pos = posOf(p.partId);
+      out += `<g class="part" data-part="${esc(p.id)}" tabindex="0" role="button" aria-label="Позиция ${pos}, ${mm(p.w)} на ${mm(p.h)} мм">`;
+      out += `<rect x="${px(p.x)}" y="${px(p.y)}" width="${px(p.w)}" height="${px(p.h)}" fill="transparent"/>`;
       out += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${esc(hex)}"/>`;
       if (b && b.hasGrain) out += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="url(#${patId}-h)"/>`;
+      out += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="${hasBad ? '#d6281e' : isSel ? 'var(--select)' : '#1c2733'}" stroke-width="${hasBad || isSel ? 3.2 : 1.1}"/>`;
+      let band = 0;
       if (info) {
-        const band = Math.max(3, Math.min(7, Math.min(w, h) * 0.08));
+        band = Math.max(3, Math.min(5, Math.min(w, h) * 0.07));
+        const inset = 3.5;
+        const corner = Math.min(9, Math.min(w, h) * 0.12);
         for (const side of SIDES) {
           const e = edge(info.part.edges[side]);
           if (!e) continue;
           const at = shownSide(side, p.rot);
           const r = {
-            top: [x, y, w, band], bottom: [x, y + h - band, w, band],
-            left: [x, y, band, h], right: [x + w - band, y, band, h],
+            top: [x + corner, y + inset, w - 2 * corner, band],
+            bottom: [x + corner, y + h - inset - band, w - 2 * corner, band],
+            left: [x + inset, y + corner, band, h - 2 * corner],
+            right: [x + w - inset - band, y + corner, band, h - 2 * corner],
           }[at];
-          out += `<rect x="${r[0]}" y="${r[1]}" width="${r[2]}" height="${r[3]}" fill="${esc(e.hex)}" stroke="#222" stroke-width=".7"/>`;
+          out += `<rect x="${r[0]}" y="${r[1]}" width="${Math.max(1, r[2])}" height="${Math.max(1, r[3])}" fill="${esc(e.hex)}" stroke="#222" stroke-width=".6"/>`;
         }
       }
-      out += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="${hasBad ? '#d6281e' : isSel ? 'var(--select)' : '#1c2733'}" stroke-width="${hasBad || isSel ? 3.2 : 1.2}"/>`;
 
       const name = info && info.part.label ? info.part.label : '';
-      const small = w < 62 || h < 30;
-      const fs = Math.max(11, Math.min(19, Math.min(w / 6.5, h / 2.4)));
+      const marks = `${p.rot ? '↻' : ''}${p.pinned ? ' ⚷' : ''}`.trim();
+      const halo = `paint-order="stroke" stroke="${ink === '#111' ? 'rgba(255,255,255,.8)' : 'rgba(0,0,0,.5)'}" stroke-width="2.5"`;
       const cx = x + w / 2;
       const cy = y + h / 2;
-      const vertical = w < 62 && h > 90;
-      const tf = vertical ? ` transform="rotate(-90 ${cx} ${cy})"` : '';
-      const dims = `${mm(p.w)}×${mm(p.h)}${p.rot ? ' ↻' : ''}${p.pinned ? ' ⚷' : ''}`;
-      const fits = vertical ? h > 74 : w > 56 && h > 15;
-      if (fits) {
-        const lines = !small && name && h > fs * 2.9 && w > name.length * fs * 0.55;
-        out += `<g pointer-events="none" font-family="IBM Plex Mono,monospace" fill="${ink}" text-anchor="middle"${tf}>`;
-        out += `<text x="${cx}" y="${lines ? cy + fs * 0.1 : cy}" dominant-baseline="central" font-size="${fs}" font-weight="600" paint-order="stroke" stroke="${ink === '#111' ? 'rgba(255,255,255,.75)' : 'rgba(0,0,0,.45)'}" stroke-width="2.5">${esc(dims)}</text>`;
-        if (lines) out += `<text x="${cx}" y="${cy - fs * 1.1}" dominant-baseline="central" font-size="${Math.max(11, fs * 0.78)}" paint-order="stroke" stroke="${ink === '#111' ? 'rgba(255,255,255,.75)' : 'rgba(0,0,0,.45)'}" stroke-width="2.5" font-family="IBM Plex Sans,sans-serif">${esc(name)}</text>`;
-        out += '</g>';
+      const room = 3.5 + band + 3;
+      const big = w >= 90 && h >= 58;
+      out += `<g pointer-events="none" font-family="IBM Plex Mono,monospace" fill="${ink}" text-anchor="middle">`;
+      if (big) {
+        const fs = Math.max(13, Math.min(21, Math.min(w / 5.5, h / 3.2)));
+        const lx = x + room + fs * 0.55;
+        out += `<text x="${cx}" y="${y + room + fs * 0.55}" dominant-baseline="central" font-size="${fs}" font-weight="600" ${halo}>${mm(p.w)}</text>`;
+        out += `<text x="${lx}" y="${cy}" dominant-baseline="central" font-size="${fs}" font-weight="600" ${halo} transform="rotate(-90 ${lx} ${cy})">${mm(p.h)}</text>`;
+        const nameFs = Math.max(11, fs * 0.72);
+        const maxChars = Math.floor((w - 2 * (room + fs * 1.1)) / (nameFs * 0.56));
+        let text = name;
+        if (text.length > maxChars) text = maxChars > 3 ? text.slice(0, maxChars - 1) + '…' : '';
+        const line = [text, marks].filter(Boolean).join(' ');
+        if (line) out += `<text x="${cx + fs * 0.4}" y="${cy + fs * 0.35}" dominant-baseline="central" font-size="${nameFs}" font-family="IBM Plex Sans,sans-serif" ${halo}>${esc(line)}</text>`;
+      } else {
+        const vertical = w < 62 && h > 74;
+        const fits = vertical || (w > 50 && h > 14);
+        if (fits) {
+          const fs = Math.max(11, Math.min(15, vertical ? w / 2.6 : Math.min(w / 6.5, h / 1.7)));
+          const tf = vertical ? ` transform="rotate(-90 ${cx} ${cy})"` : '';
+          out += `<text x="${cx}" y="${cy}" dominant-baseline="central" font-size="${fs}" font-weight="600" ${halo}${tf}>${mm(p.w)}×${mm(p.h)}${marks ? ' ' + marks : ''}</text>`;
+        }
       }
-      if (w > 24 && h > 20) {
-        const bw = String(i + 1).length * 8 + 7;
-        out += `<g pointer-events="none"><rect x="${x + w - bw - 2}" y="${y + h - 18}" width="${bw}" height="16" fill="#1c2733" rx="2"/><text x="${x + w - bw / 2 - 2}" y="${y + h - 10}" text-anchor="middle" dominant-baseline="central" font-family="IBM Plex Mono,monospace" font-size="12" fill="#fff">${i + 1}</text></g>`;
+      out += '</g>';
+      if (w > 30 && h > 22) {
+        const bw = String(pos).length * 8 + 8;
+        out += `<g pointer-events="none"><rect x="${x + w - bw - 2}" y="${y + h - 19}" width="${bw}" height="17" fill="#1c2733" rx="2"/><text x="${x + w - bw / 2 - 2}" y="${y + h - 10.5}" text-anchor="middle" dominant-baseline="central" font-family="IBM Plex Mono,monospace" font-size="12" fill="#fff">${pos}</text></g>`;
       }
       out += '</g>';
     });
@@ -782,54 +845,130 @@
     return out + '</svg>';
   }
 
-  function cutListHtml(sh, a) {
-    const items = a.plan.cuts
-      .map((c) => {
-        const type = c.axis === 'V' ? 'Верт.' : 'Хор.';
-        const axis = c.axis === 'V' ? 'X' : 'Y';
-        return `<li><span class="cut-n">${c.n}</span><span>${type} ${axis}=${mm(c.at)}</span><span>${mm(c.len)}</span></li>`;
-      })
-      .join('');
-    const note = sh.trim > 0 ? `<p class="hint">Първо обрежи по ${mm(sh.trim)} мм от всеки край.</p>` : '';
-    const body = a.plan.ok
-      ? `<ol>${items || '<li><span></span><span>Без резове</span><span></span></li>'}</ol>`
-      : `<p class="hint">Подредбата не може да се изреже с проходни резове. Премести отбелязаните детайли.</p><ol>${items}</ol>`;
-    return `<div class="cut-list"><h3>Последователност на рязане (координата, дължина в мм)</h3>${note}${body}</div>`;
+  function edgeCell(part, side) {
+    const e = edge(part.edges[side]);
+    if (!e) return '<span class="no-edge">–</span>';
+    return `<span class="swatch" style="background:${esc(e.hex)}"></span> ${esc(e.name)}`;
   }
 
-  function edgeListHtml(part) {
-    const byEdge = new Map();
-    for (const s of ['top', 'bottom', 'left', 'right']) {
-      const e = edge(part.edges[s]);
-      if (e) (byEdge.get(e) || byEdge.set(e, []).get(e)).push(SIDE_LABEL[s]);
-    }
-    if (!byEdge.size) return 'без кант';
-    return [...byEdge].map(([e, sides]) => `${sides.join(' ')} <span class="swatch" style="background:${esc(e.hex)}"></span> ${esc(e.name)}`).join(', ');
-  }
+  const edgeMetersOf = (part) => SIDES.reduce((m, s) => (edge(part.edges[s]) ? m + (s === 'top' || s === 'bottom' ? part.w : part.h) / 1000 : m), 0);
 
-  /** Еднаквите детайли стоят на един ред, с номерата им от чертежа. */
+  /** Таблицата на листа: еднаквите детайли са на един ред с номера на позицията от чертежа. */
   function partsTableHtml(sh) {
     const groups = new Map();
-    sh.parts.forEach((p, i) => {
+    sh.parts.forEach((p) => {
       const k = p.partId + '|' + !!p.rot;
-      if (!groups.has(k)) groups.set(k, { p, nums: [], ids: [] });
-      groups.get(k).nums.push(i + 1);
-      groups.get(k).ids.push(p.id);
+      if (!groups.has(k)) groups.set(k, { p, n: 0, ids: [] });
+      const g = groups.get(k);
+      g.n++;
+      g.ids.push(p.id);
     });
     const rows = [...groups.values()]
-      .map(({ p, nums, ids }) => {
+      .sort((a, b) => posOf(a.p.partId) - posOf(b.p.partId))
+      .map(({ p, n, ids }) => {
         const info = placementInfo(p);
-        if (!info) return `<tr><td class="num">${nums.join(', ')}</td><td colspan="5">Детайлът е изтрит от списъка</td></tr>`;
+        if (!info) return `<tr><td colspan="10">Детайлът е изтрит от списъка (${n} бр.)</td></tr>`;
+        const part = info.part;
         return `<tr class="${ids.includes(selectedId) ? 'is-selected' : ''}">
-          <td class="nums">${nums.join(', ')}</td><td>${esc(info.part.label) || '–'}</td>
-          <td class="num">${mm(info.part.w)}×${mm(info.part.h)}</td>
-          <td class="num"><b>${mm(info.cut.w)}×${mm(info.cut.h)}</b></td>
-          <td>${p.rot ? 'завъртян ↻' : ''}</td>
-          <td>${edgeListHtml(info.part)}</td></tr>`;
+          <td class="num"><b>${posOf(p.partId)}</b></td><td>${esc(part.label) || '–'}</td>
+          <td class="num"><b>${n}</b></td>
+          <td class="num"><b>${mm(p.w)} × ${mm(p.h)}</b></td>
+          <td class="num">${mm(part.w)} × ${mm(part.h)}</td>
+          <td>${p.rot ? 'завъртян ↻' : 'както е въведен'}</td>
+          <td>${edgeCell(part, 'top')}</td><td>${edgeCell(part, 'bottom')}</td><td>${edgeCell(part, 'left')}</td><td>${edgeCell(part, 'right')}</td></tr>`;
       })
       .join('');
-    return `<details class="parts-detail" data-print><summary>Детайли на листа (${sh.parts.length})</summary>
-      <div class="table-scroll"><table class="data-table"><thead><tr><th>№ на чертежа</th><th>Име</th><th class="num">Краен размер</th><th class="num">За рязане</th><th>Положение</th><th>Кант</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
+    return `<details class="parts-detail" data-print open><summary>Детайли на листа (${sh.parts.length} бр.)</summary>
+      <div class="table-scroll"><table class="data-table spec-table"><thead><tr><th class="num">Поз.</th><th>Име</th><th class="num">Брой</th><th class="num">Рязане (на листа)</th><th class="num">Краен размер</th><th>Положение</th><th>Ш1 горе</th><th>Ш2 долу</th><th>В1 ляво</th><th>В2 дясно</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
+  }
+
+  // ==========================================================================
+  // ОБЩА СПЕЦИФИКАЦИЯ
+  // ==========================================================================
+
+  function specData() {
+    const allowance = 1 + (state.settings.edgeAllowance || 0) / 100;
+    const sheets = {};
+    const remnants = {};
+    for (const sh of state.layout ? state.layout.sheets : []) {
+      if (!sh.parts.length) continue;
+      if (sh.kind === 'full') sheets[sh.boardId] = (sheets[sh.boardId] || 0) + 1;
+      else remnants[sh.boardId] = (remnants[sh.boardId] || 0) + 1;
+    }
+    const edgeM = {};
+    for (const p of state.parts) {
+      for (const s of SIDES) {
+        const e = edge(p.edges[s]);
+        if (e) edgeM[e.id] = (edgeM[e.id] || 0) + ((s === 'top' || s === 'bottom' ? p.w : p.h) * p.qty) / 1000;
+      }
+    }
+    return { allowance, sheets, remnants, edgeM };
+  }
+
+  function renderSpec() {
+    const { allowance, sheets, remnants, edgeM } = specData();
+    const { kerf, trim } = state.settings;
+    const boardsWithParts = state.boards.filter((b) => state.parts.some((p) => p.boardId === b.id));
+    const today = new Date().toLocaleDateString('bg-BG');
+
+    const tables = boardsWithParts
+      .map((b) => {
+        const rows = state.parts.filter((p) => p.boardId === b.id);
+        const totalQty = rows.reduce((n, p) => n + p.qty, 0);
+        const area = rows.reduce((n, p) => {
+          const c = cutSize(p);
+          return n + (c.w * c.h * p.qty) / 1e6;
+        }, 0);
+        const body = rows
+          .map((p) => {
+            const c = cutSize(p);
+            return `<tr><td class="num"><b>${posOf(p.id)}</b></td><td>${esc(p.label) || '–'}</td>
+              <td class="num"><b>${p.qty}</b></td>
+              <td class="num">${mm(p.w)} × ${mm(p.h)}</td>
+              <td class="num"><b>${mm(c.w)} × ${mm(c.h)}</b></td>
+              <td>${p.allowRotate ? 'Завъртане' : 'Без завъртане'}</td>
+              <td>${edgeCell(p, 'top')}</td><td>${edgeCell(p, 'bottom')}</td><td>${edgeCell(p, 'left')}</td><td>${edgeCell(p, 'right')}</td>
+              <td class="num">${fmt(edgeMetersOf(p) * p.qty)}</td></tr>`;
+          })
+          .join('');
+        return `<h4 class="spec-board"><span class="swatch" style="background:${esc(b.hex)}"></span> ${esc(b.name)}, лист ${mm(b.w)} × ${mm(b.h)} мм${b.hasGrain ? ', с фладер по ширината на листа' : ''}</h4>
+          <div class="table-scroll"><table class="data-table spec-table"><thead><tr><th class="num">Поз.</th><th>Име</th><th class="num">Брой</th><th class="num">Краен размер Ш × В</th><th class="num">Размер за рязане</th><th>Завъртане</th><th>Ш1 горе</th><th>Ш2 долу</th><th>В1 ляво</th><th>В2 дясно</th><th class="num">Кант, м</th></tr></thead>
+          <tbody>${body}<tr class="spec-sum"><td colspan="2">Общо за ${esc(b.name)}</td><td class="num">${totalQty}</td><td colspan="7" class="num">Площ на детайлите ${fmt(area)} m²</td><td class="num">${fmt(rows.reduce((n, p) => n + edgeMetersOf(p) * p.qty, 0))}</td></tr></tbody></table></div>`;
+      })
+      .join('');
+
+    const summary = [
+      ...boardsWithParts.map((b) => `<tr><td><span class="swatch" style="background:${esc(b.hex)}"></span> Плоскост ${esc(b.name)}</td><td class="num">${mm(b.w)} × ${mm(b.h)} мм</td><td class="num"><b>${sheets[b.id] || 0} ${sheets[b.id] === 1 ? 'лист' : 'листа'}</b>${remnants[b.id] ? ` + ${remnants[b.id]} остатъка` : ''}</td></tr>`),
+      ...Object.keys(edgeM).map((id) => {
+        const e = edge(id);
+        return `<tr><td><span class="swatch" style="background:${esc(e.hex)}"></span> Кант ${esc(e.name)}</td><td class="num">${mm(e.thick)} мм</td><td class="num"><b>${fmt(edgeM[id])} м</b>, със запас ${fmt(edgeM[id] * allowance)} м</td></tr>`;
+      }),
+    ].join('');
+
+    $('specBlock').innerHTML = `
+      <div class="spec-head">
+        <div><h3>Обща спецификация</h3><p class="spec-meta">${esc(state.name || 'Без име')} · ${today}</p></div>
+        <div class="panel-tools no-print">
+          <button class="btn" type="button" id="copySpec">Копирай за Excel</button>
+          <button class="btn" type="button" id="printSpec" data-file-action${SANDBOXED ? ' hidden' : ''}>Печат само на спецификацията</button>
+        </div>
+      </div>
+      <p class="spec-meta">Диск ${mm(kerf)} мм${trim ? `, обрез ${mm(trim)} мм от всеки край` : ''}. Крайният размер е с кант. Размерът за рязане е намален с дебелината на канта. Ш1 и Ш2 са страните по ширината, В1 и В2 по височината.</p>
+      ${tables}
+      <h4 class="spec-board">Общо материали</h4>
+      <div class="table-scroll"><table class="data-table spec-table"><thead><tr><th>Материал</th><th class="num">Размер / дебелина</th><th class="num">Количество</th></tr></thead><tbody>${summary}</tbody></table></div>`;
+  }
+
+  function specTsv() {
+    const head = ['Поз.', 'Име', 'Плоскост', 'Брой', 'Краен Ш', 'Краен В', 'Рязане Ш', 'Рязане В', 'Завъртане', 'Ш1 горе', 'Ш2 долу', 'В1 ляво', 'В2 дясно', 'Кант, м'];
+    const n = (v) => String(Math.round(v * 100) / 100).replace('.', ',');
+    const rows = state.parts.map((p) => {
+      const c = cutSize(p);
+      const side = (s) => (edge(p.edges[s]) ? edge(p.edges[s]).name : '');
+      const b = board(p.boardId);
+      return [posOf(p.id), p.label, b ? b.name : '', p.qty, n(p.w), n(p.h), n(c.w), n(c.h), p.allowRotate ? 'Завъртане' : 'Без завъртане', side('top'), side('bottom'), side('left'), side('right'), n(edgeMetersOf(p) * p.qty)].join('\t');
+    });
+    return [head.join('\t'), ...rows].join('\n');
   }
 
   function renderSheets() {
@@ -874,8 +1013,8 @@
           </div>
           <div class="sheet-body">
             <div class="sheet-svg-wrap">${drawSheet(sh, n - 1, a)}${selectedId && sh.parts.some((p) => p.id === selectedId) ? popoverHtml(sh, sh.parts.find((p) => p.id === selectedId)) : ''}</div>
-            ${cutListHtml(sh, a)}
           </div>
+          ${sh.trim > 0 ? `<p class="hint">Първо обрежи по ${mm(sh.trim)} мм от всеки край.</p>` : ''}
           ${partsTableHtml(sh)}
         </article>`;
       })
@@ -887,6 +1026,7 @@
 
     renderKpis();
     renderCosts();
+    renderSpec();
     renderProblems();
     positionPopover();
     $('undo').disabled = undoStack.length === 0;
@@ -963,7 +1103,7 @@
       if (!b) continue;
       const cost = boardsUsed[id] * b.price;
       total += cost;
-      rows.push(`<tr><td><span class="swatch" style="background:${esc(b.hex)}"></span> Плоскост ${esc(b.name)}</td><td class="num">${boardsUsed[id]} листа</td><td class="num">${money(b.price)}</td><td class="num">${money(cost)}</td></tr>`);
+      rows.push(`<tr><td><span class="swatch" style="background:${esc(b.hex)}"></span> Плоскост ${esc(b.name)}</td><td class="num">${boardsUsed[id]} ${boardsUsed[id] === 1 ? 'лист' : 'листа'}</td><td class="num">${money(b.price)}</td><td class="num">${money(cost)}</td></tr>`);
     }
     for (const id of Object.keys(edgeM)) {
       const e = edge(id);
@@ -1049,14 +1189,16 @@
     const wrap = pop.parentElement;
     const W = wrap.clientWidth;
     const svgH = wrap.querySelector('svg').clientHeight;
-    const k = W / found.sheet.w;
+    const unit = W / (SVG_W + SVG_M);
+    const k = unit * (SVG_W / found.sheet.w);
+    const ox = SVG_M * unit;
     const p = found.placement;
     const pw = pop.offsetWidth;
     const ph = pop.offsetHeight;
-    const left = Math.max(0, Math.min(W - pw, (p.x + p.w / 2) * k - pw / 2));
-    let top = (p.y + p.h) * k + 6;
-    if (top + ph > svgH) top = p.y * k - ph - 6;
-    if (top < 0) top = Math.max(0, Math.min(svgH - ph, (p.y + p.h / 2) * k - ph / 2));
+    const left = Math.max(0, Math.min(W - pw, ox + (p.x + p.w / 2) * k - pw / 2));
+    let top = ox + (p.y + p.h) * k + 6;
+    if (top + ph > svgH) top = ox + p.y * k - ph - 6;
+    if (top < 0) top = Math.max(0, Math.min(svgH - ph, ox + (p.y + p.h / 2) * k - ph / 2));
     pop.style.left = left + 'px';
     pop.style.top = top + 'px';
   }
@@ -1921,6 +2063,15 @@
     });
 
     $('exportPDF').onclick = () => window.print();
+    $('printPrices').onchange = (e) => $('costBlock').classList.toggle('no-print', !e.target.checked);
+    $('specBlock').addEventListener('click', (e) => {
+      if (e.target.id === 'copySpec') copyText(specTsv(), 'Спецификацията е копирана. Постави я в Excel.');
+      if (e.target.id === 'printSpec') {
+        document.body.classList.add('print-spec');
+        window.print();
+      }
+    });
+    window.addEventListener('afterprint', () => document.body.classList.remove('print-spec'));
     let reopen = [];
     window.addEventListener('beforeprint', () => {
       reopen = [...document.querySelectorAll('.parts-detail:not([open])')];
