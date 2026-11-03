@@ -9,6 +9,7 @@ let html = read('index.html');
 html = html.replace('<link rel="stylesheet" href="style.css">', () => `<style>\n${read('style.css')}\n</style>`);
 const flag = sandbox ? '<script>window.__CUTTING_SANDBOXED__=true;</script>\n  ' : '';
 html = html.replace('<script src="optimizer.js"></script>', () => `${flag}<script>\n${safe(read('optimizer.js'))}\n</script>`);
+html = html.replace('<script src="modules.js"></script>', () => `<script>\n${safe(read('modules.js'))}\n</script>`);
 html = html.replace('<script src="main.js"></script>', () => `<script>\n${safe(read('main.js'))}\n</script>`);
 if (fragment) html = html.replace(/<!DOCTYPE html>\s*<html[^>]*>\s*<head>\s*<meta charset="UTF-8">\s*<meta name="viewport"[^>]*>/i, '').replace(/<\/head>\s*<body>/i, '').replace(/<\/body>\s*<\/html>\s*$/i, '');
 mkdirSync(new URL('dist/', root), { recursive: true });

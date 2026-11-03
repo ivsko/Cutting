@@ -443,6 +443,111 @@ input:focus, select:focus, textarea:focus { outline: none; background: var(--sur
 .edge-summary { white-space: normal; text-align: left; padding-inline: 2px; }
 .edge-summary span { min-width: 60px; }
 
+/* Модули */
+.modules-view.active { display: grid; gap: 16px; min-width: 0; }
+.steps { grid-auto-rows: auto; }
+.mod-form { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 10px; align-items: end; }
+.mod-form .field { grid-column: span 2; }
+.mod-form .mod-name, .mod-form .mod-wide { grid-column: span 4; }
+.mod-form .mod-wide:nth-of-type(n) input, .mod-form input, .mod-form select { width: 100%; }
+.mod-form .mod-add { grid-column: span 4; }
+.mod-form .mod-add .btn { width: 100%; padding: 9px; }
+.span-all { grid-column: 1 / -1; }
+.seg { display: inline-grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; padding: 3px; background: var(--surface-2); border-radius: 9px; max-width: 520px; }
+.seg button { font: inherit; font-weight: 500; font-size: .86rem; border: 0; background: none; color: var(--muted); padding: 7px 4px; border-radius: 7px; cursor: pointer; }
+.seg button.active { background: var(--accent); color: var(--on-accent); }
+.check-label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.check-label input { width: auto !important; }
+.mod-table input[type="number"] { min-width: 50px; padding-inline: 3px; }
+.mod-table td:first-child { min-width: 160px; }
+.mod-table select { min-width: 92px; padding-inline: 3px; }
+.mod-table td:nth-child(9) select { min-width: 130px; }
+.icon-btn.plain:hover { background: var(--surface-2); color: var(--fg); }
+.mod-table tr.is-open td { background: var(--accent-soft); }
+.mod-detail > td { background: var(--surface-2) !important; padding: 8px 12px 12px; }
+.mod-detail .data-table tbody tr:hover td { background: none; }
+.mod-status { font-size: .8rem; color: var(--ok-fg); }
+.mod-status.pending { color: var(--warn-fg); background: var(--warn-bg); padding: 2px 8px; border-radius: 5px; }
+.rules-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px; align-items: end; }
+.rules-grid input, .rules-grid select { width: 100%; }
+.auto-grid { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto; }
+.banner-plain { background: var(--surface-2); color: var(--muted); }
+.elevation { min-width: 0; }
+.elevation svg { display: block; width: 100%; height: auto; max-height: 460px; }
+.elev-mod { cursor: pointer; }
+.elev-mod:hover rect { filter: brightness(1.06); }
+.more-panel summary { cursor: pointer; }
+.more-panel summary h2 { display: inline; }
+.more-panel[open] summary { margin-bottom: 12px; }
+.settings-sections { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 28px; }
+.settings-sections h3 { font-size: .9rem; margin-bottom: 4px; color: var(--fg); }
+.check-col { display: grid; gap: 3px; justify-items: start; }
+.transfer { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+.transfer .hint { margin: 2px 0 0; }
+@media (max-width: 860px) {
+  .steps { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .step { font-size: .76rem; flex-direction: column; gap: 2px; }
+  .mod-form .field, .mod-form .mod-name, .mod-form .mod-wide, .mod-form .mod-add { grid-column: span 6; }
+  .mod-form .mod-name, .mod-form .mod-add { grid-column: 1 / -1; }
+  .rules-grid, .auto-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .auto-grid .grow-2, .auto-grid .form-actions { grid-column: 1 / -1; }
+  .settings-sections { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Модули: опростен вид */
+.quick-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 12px; align-items: end; }
+.quick-grid input[type="number"], .quick-grid select { width: 100%; }
+.quick-checks { display: flex; flex-wrap: wrap; gap: 2px 8px; grid-column: span 2; align-self: center; }
+.presets { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-bottom: 14px; }
+.preset-group { display: grid; gap: 4px; }
+.preset-group > span { font-size: .72rem; color: var(--muted); font-weight: 500; }
+.preset-group > div { display: flex; flex-wrap: wrap; gap: 5px; }
+.preset { font: inherit; font-weight: 500; font-size: .86rem; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--fg); cursor: pointer; transition: background .12s; }
+.preset:hover { background: var(--surface-2); }
+.preset.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.mod-form [hidden] { display: none !important; }
+.drawer-box { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: end; background: var(--surface-2); padding: 10px 12px; border-radius: 9px; }
+.drawer-box .field { flex: 1 1 280px; }
+.drawer-box input { background: var(--surface); width: 100%; }
+.ratio-btns { display: flex; flex-wrap: wrap; gap: 5px; }
+.front-info { margin: 0; font-size: .86rem; color: var(--accent); font-weight: 500; min-height: 1.2em; font-family: var(--sans); }
+.mod-form .form-actions.span-all .btn-primary { min-width: 180px; padding: 9px 18px; }
+.mod-groups { display: grid; gap: 14px; }
+.mod-group h3 { font-size: .74rem; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin: 0 0 3px; }
+.mod-row { border-bottom: 1px solid var(--line); }
+.mod-row:last-child { border-bottom: 0; }
+.mod-row.is-open { background: var(--surface-2); border-radius: 8px; }
+.mod-row.is-editing { outline: 2px solid var(--accent); border-radius: 8px; }
+.mod-main { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 5px 6px; }
+.mod-title { flex: 1 1 280px; min-width: 0; display: grid; grid-template-columns: 16px minmax(0, 1fr); column-gap: 4px; text-align: left; background: none; border: 0; font: inherit; color: var(--fg); cursor: pointer; padding: 2px; }
+.mod-title .caret { grid-row: span 2; color: var(--muted); }
+.mod-title b { font-weight: 600; font-size: .9rem; }
+.mod-title small { color: var(--muted); font-size: .78rem; }
+.mod-qty { display: inline-flex; align-items: center; gap: 5px; font-size: .78rem; color: var(--muted); }
+.mod-qty input { width: 58px; padding: 4px 6px; }
+.mod-actions { display: flex; align-items: center; gap: 1px; }
+.mod-actions .btn { padding: 4px 8px; font-size: .8rem; }
+.mod-detail { padding: 0 12px 10px 28px; background: transparent !important; }
+.auto-grid { margin-top: 8px; }
+@media (max-width: 860px) {
+  .quick-checks { grid-column: 1 / -1; }
+  .mod-form .field.mod-wide { grid-column: 1 / -1; }
+}
+
+.elev-print { display: none; }
+
+/* Форма на кухнята */
+.shape-row { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; margin-bottom: 12px; }
+.shape-seg { grid-template-columns: repeat(3, minmax(0, 1fr)); min-width: 300px; }
+.wall-tabs { display: flex; flex-wrap: wrap; gap: 5px; }
+.wall-tab { font: inherit; font-size: .86rem; font-weight: 600; padding: 5px 12px; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--fg); cursor: pointer; display: grid; line-height: 1.25; }
+.wall-tab small { color: var(--muted); font-weight: 400; font-size: .72rem; }
+.wall-tab.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.plan-view svg { display: block; width: 100%; height: auto; max-height: 380px; margin-bottom: 12px; }
+.extra-row td { color: var(--accent); }
+.print-wall h3 { font-size: .9rem; margin: 6px 0 2px; }
+@media (max-width: 500px) { .shape-seg { min-width: 0; width: 100%; } }
+
 @media print {
   :root, :root:not([data-theme="light"]), :root[data-theme="dark"] {
     --bg: #fff; --surface: #fff; --surface-2: #fff; --fg: #000; --muted: #333; --line: #bbb; --line-strong: #777; --cut: #b00045; --offcut: #0b6636; color-scheme: light;
@@ -470,6 +575,15 @@ input:focus, select:focus, textarea:focus { outline: none; background: var(--sur
   .spec-block { display: block; border: 0; padding: 0; break-before: page; }
   body.print-spec .sheets, body.print-spec .cost-block { display: none !important; }
   body.print-spec .spec-block { break-before: auto; }
+  body.print-elev .results-view { display: none !important; }
+  body.print-elev .elev-print { display: block; }
+  .elev-print svg { display: block; width: 100%; height: auto; max-height: 105mm; margin: 4px 0 8px; }
+  .print-wall { break-inside: avoid; }
+  .print-plan svg { max-height: 72mm; }
+  .elev-print.multi svg { max-height: 72mm; }
+  .print-list { break-before: auto; }
+  .print-list tr { break-inside: avoid; }
+  .elev-print .elev-mod rect { stroke-width: 3; }
   .spec-table td { white-space: normal; }
   .spec-board { break-after: avoid; }
   .edge-item { display: inline; margin-right: 10px; }

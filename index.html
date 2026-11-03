@@ -17,8 +17,9 @@
       </div>
       <nav class="steps" aria-label="Стъпки">
         <button class="step" type="button" data-view="materials"><i>1</i><span>Материали</span></button>
-        <button class="step" type="button" data-view="parts"><i>2</i><span>Детайли</span> <span id="partsBadge" class="badge"></span></button>
-        <button class="step" type="button" data-view="results"><i>3</i><span>Разкрой</span> <span id="sheetsBadge" class="badge"></span></button>
+        <button class="step" type="button" data-view="modules"><i>2</i><span>Модули</span> <span id="modulesBadge" class="badge"></span></button>
+        <button class="step" type="button" data-view="parts"><i>3</i><span>Детайли</span> <span id="partsBadge" class="badge"></span></button>
+        <button class="step" type="button" data-view="results"><i>4</i><span>Разкрой</span> <span id="sheetsBadge" class="badge"></span></button>
       </nav>
       <div class="side-projects">
         <div class="side-head"><h2>Проекти</h2><button id="newProject" class="btn btn-soft" type="button">+ Нов</button></div>
@@ -54,7 +55,7 @@
       <section class="panel wide">
         <h2>Плоскости</h2>
         <div class="table-scroll"><table class="data-table" id="boardsTable">
-          <thead><tr><th>Цвят</th><th>Декор</th><th class="num">Ширина, мм</th><th class="num">Височина, мм</th><th>Фладер</th><th class="num">€ за лист</th><th></th></tr></thead>
+          <thead><tr><th>Цвят</th><th>Декор</th><th class="num">Ширина, мм</th><th class="num">Височина, мм</th><th class="num">Дебелина, мм</th><th>Фладер</th><th class="num">€ за лист</th><th></th></tr></thead>
           <tbody></tbody>
         </table></div>
         <button id="addBoardDefBtn" class="btn" type="button">+ Добави плоскост</button>
@@ -76,9 +77,137 @@
         </table></div>
         <button id="addStock" class="btn" type="button">+ Добави остатък</button>
       </section>
+      <section class="panel">
+        <h2>Стъкла</h2>
+        <div class="table-scroll"><table class="data-table" id="glassTable">
+          <thead><tr><th>Цвят</th><th>Вид</th><th class="num">Дебелина, мм</th><th class="num">€ за m²</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <button id="addGlass" class="btn" type="button">+ Добави стъкло</button>
+      </section>
+      <section class="panel">
+        <h2>Профили за врати</h2>
+        <div class="table-scroll"><table class="data-table" id="profileTable">
+          <thead><tr><th>Цвят</th><th>Вид</th><th class="num">Стъклото по-малко с, мм</th><th class="num">€ за метър</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <p class="hint">Колко по-малко е стъклото от вратата по височина и по ширина. Виж го при доставчика на профила.</p>
+        <button id="addProfile" class="btn" type="button">+ Добави профил</button>
+      </section>
     </div>
 
-    <!-- 2. ДЕТАЙЛИ -->
+    <!-- 2. МОДУЛИ -->
+    <div class="view modules-view no-print" id="view-modules">
+      <section class="panel">
+        <div class="panel-head"><h2>Общи размери</h2></div>
+        <div id="modQuick" class="quick-grid"></div>
+      </section>
+
+      <section class="panel" id="modFormPanel">
+        <div class="panel-head">
+          <h2 id="modFormTitle">Какво добавяш?</h2>
+          <button id="modSample" class="btn btn-quiet" type="button">Зареди примерна кухня</button>
+        </div>
+        <div id="modPresets" class="presets"></div>
+        <form id="modForm" class="mod-form">
+          <div class="field mod-name"><label for="modName">Име (по желание)</label><input id="modName"></div>
+          <div class="field"><label for="modW" id="modWLabel">Ширина, мм</label><input id="modW" type="number" min="1" step="0.5" required></div>
+          <div class="field"><label for="modH" id="modHLabel">Височина, мм</label><input id="modH" type="number" min="1" step="0.5" required></div>
+          <div class="field" data-for="carcass"><label for="modD">Дълбочина, мм</label><input id="modD" type="number" min="1"></div>
+          <div class="field"><label for="modCount">Брой</label><input id="modCount" type="number" min="1" value="1" required></div>
+
+          <div class="field" data-for="carcass"><label class="check-label"><input id="modShelvesOn" type="checkbox"> Рафтове</label><input id="modShelves" type="number" min="0" value="1" aria-label="Брой рафтове"></div>
+          <div class="field" data-for="carcass"><label class="check-label"><input id="modDividersOn" type="checkbox"> Делители</label><input id="modDividers" type="number" min="0" value="1" aria-label="Брой делители"></div>
+          <div class="field mod-wide" data-for="carcass"><label for="modFront">Лице</label><select id="modFront"></select></div>
+          <div class="field" data-for="carcass" id="modCountField"><label for="modFrontCount" id="modFrontCountLabel">Брой врати</label><input id="modFrontCount" type="number" min="1" value="2"></div>
+
+          <div class="drawer-box span-all" id="modDrawerBox" data-front="drawers" hidden>
+            <div class="field"><label for="modRatios">Височини отгоре надолу: части (1:2:2) или мм (140мм:1:1)</label><input id="modRatios" placeholder="1:1:1"></div>
+            <div class="ratio-btns">
+              <button type="button" class="btn" data-ratio="equal">Равни</button>
+              <button type="button" class="btn" data-ratio="lowTop">Ниско горно</button>
+              <button type="button" class="btn" data-ratio="tallBottom">Високо долно</button>
+            </div>
+          </div>
+          <div class="field" id="modOvenBox" data-front="oven" hidden><label for="modOvenH">Ниша за фурна, мм</label><input id="modOvenH" type="number" min="100" value="595"></div>
+          <label class="check" id="modOvenDrawerBox" data-front="oven" hidden><input id="modOvenDrawer" type="checkbox" checked> Чекмедже под фурната</label>
+          <div class="field" data-front="cornerBlind" hidden><label for="modCornerDoor">Ширина на вратата, мм</label><input id="modCornerDoor" type="number" min="50" value="450"></div>
+          <div class="field mod-wide" data-front="hinged sliding lift combo cornerBlind" hidden><label for="modDoorStyle">Вид врата</label><select id="modDoorStyle"><option value="board">Плоскост</option><option value="profile">Профил и стъкло</option><option value="glass">Стъкло без рамка</option></select></div>
+          <div class="field mod-wide" data-door="profile" hidden><label for="modProfile">Профил</label><select id="modProfile"></select></div>
+          <div class="field mod-wide" data-door="profile glass" hidden><label for="modGlass">Стъкло</label><select id="modGlass"></select></div>
+          <div class="field mod-wide" data-shelf-style hidden><label for="modShelfStyle">Рафтове от</label><select id="modShelfStyle"><option value="board">Плоскост</option><option value="glass">Стъкло</option></select></div>
+          <div class="field mod-wide" data-shelf-glass hidden><label for="modShelfGlass">Стъкло за рафтове</label><select id="modShelfGlass"></select></div>
+          <div class="field" id="modComboBox" data-front="combo" hidden><label for="modComboH">Височина на чело, мм</label><input id="modComboH" type="number" min="50" value="140"></div>
+
+          <div class="field mod-wide" data-for="carcass"><label for="modBack">Гръб</label><select id="modBack"><option value="overlay">Наложен</option><option value="groove">В канал</option><option value="none">Без гръб</option></select></div>
+          <div class="field mod-wide" data-for="carcass"><label for="modFaceBoard">Плоскост за лицето</label><select id="modFaceBoard"></select></div>
+
+          <div class="field mod-wide" data-for="glassItem"><label for="modItemGlass">Стъкло</label><select id="modItemGlass"></select></div>
+          <div class="field mod-wide" data-for="profileItem"><label for="modItemProfile">Профил</label><select id="modItemProfile"></select></div>
+          <div class="field mod-wide" data-wall-field hidden><label for="modWall">Стена</label><select id="modWall"></select></div>
+          <div class="field mod-wide" data-for="single"><label for="modSingleBoard">Плоскост</label><select id="modSingleBoard"></select></div>
+          <div class="field mod-wide" data-for="single"><label for="modSingleSides">Кант</label><select id="modSingleSides"><option value="none">Без кант</option><option value="front">По едната дълга страна</option><option value="long">По двете дълги страни</option><option value="all">От всички страни</option></select></div>
+          <div class="field mod-wide" data-for="single" id="modSingleEdgeField"><label for="modSingleEdge">Вид кант</label><select id="modSingleEdge"></select></div>
+
+          <p id="modFrontInfo" class="front-info span-all"></p>
+          <div class="form-actions span-all">
+            <button id="modSubmit" class="btn btn-primary" type="submit">Добави</button>
+            <button id="modCancel" class="btn" type="button" hidden>Откажи</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Какво има в проекта</h2><span id="modStatus" class="mod-status"></span></div>
+        <div id="modList" class="mod-groups"></div>
+        <p id="modEmpty" class="empty">Още няма нищо. Избери шаблон по-горе и натисни „Добави“.</p>
+        <div id="modWarnings"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Форма на кухнята и подредба</h2><button id="printElevation" class="btn" type="button" data-file-action>Печат на визуализацията</button></div>
+        <div class="shape-row">
+          <div class="seg shape-seg" id="modShape" role="group" aria-label="Форма на кухнята">
+            <button type="button" data-shape="1">Права</button>
+            <button type="button" data-shape="2">Г-образна</button>
+            <button type="button" data-shape="3">П-образна</button>
+          </div>
+          <div class="wall-tabs" id="wallTabs" role="group" aria-label="Стени"></div>
+        </div>
+        <div id="planView" class="plan-view"></div>
+        <div class="rules-grid">
+          <div class="field"><label for="ruleWall">Дължина на стената, мм</label><input id="ruleWall" type="number" min="0" placeholder="без ограничение"></div>
+          <div class="field"><label for="ruleOrder">Ред на модулите</label><select id="ruleOrder"><option value="list">Както са в списъка</option><option value="wideFirst">Широките първи</option><option value="narrowFirst">Тесните първи</option><option value="symmetric">Широките в средата</option><option value="edgesWide">Широките в краищата</option></select></div>
+          <div class="field"><label for="ruleTall">Колони и гардероби</label><select id="ruleTall"><option value="right">Вдясно</option><option value="left">Вляво</option><option value="ends">В двата края</option></select></div>
+          <div class="field"><label for="ruleUpper">Горен ред</label><select id="ruleUpper"><option value="left">Подравнен вляво</option><option value="center">Центриран</option><option value="right">Подравнен вдясно</option></select></div>
+        </div>
+        <div id="wallBanner"></div>
+        <div id="elevation" class="elevation"></div>
+        <details class="more">
+          <summary>Автоматично запълване на стената</summary>
+          <div class="rules-grid auto-grid">
+            <div class="field grow-2"><label for="ruleWidths">Разрешени ширини</label><input id="ruleWidths"></div>
+            <div class="field"><label for="rulePreferred">Предпочитана ширина</label><input id="rulePreferred" type="number" min="1"></div>
+            <div class="form-actions"><button id="fillLower" class="btn" type="button">Запълни долния ред</button><button id="fillUpper" class="btn" type="button">Запълни горния ред</button></div>
+          </div>
+        </details>
+      </section>
+
+      <details class="panel more-panel">
+        <summary><h2>Конструкция и материали</h2></summary>
+        <div id="modSettings" class="settings-sections"></div>
+      </details>
+
+      <section class="panel transfer">
+        <div><h2>Готови ли са модулите?</h2><p id="transferSummary" class="hint"></p></div>
+        <div class="form-actions">
+          <button id="transferParts" class="btn" type="button">Прехвърли в детайлите</button>
+          <button id="transferRun" class="btn btn-primary" type="button">Прехвърли и генерирай разкрой</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- 3. ДЕТАЙЛИ -->
     <div class="view workspace no-print" id="view-parts">
       <section class="panel" aria-labelledby="partsHeading">
         <div class="panel-head">
@@ -138,6 +267,7 @@
             <tbody id="partsList"></tbody>
           </table>
         </div>
+        <p id="partsHint" class="hint" hidden>Редовете от модули се презаписват при следващо прехвърляне. За трайна промяна смени модула или конструкцията.</p>
         <p id="partsEmpty" class="empty">Няма детайли. Добави първия от формата по-горе.</p>
       </section>
 
@@ -164,6 +294,8 @@
         </details>
       </section>
     </div>
+
+    <div id="elevPrint" class="elev-print"></div>
 
     <!-- 3. РАЗКРОЙ -->
     <div class="view results-view" id="view-results">
@@ -209,6 +341,7 @@
   <div id="toast" class="toast no-print" role="status" hidden></div>
 
   <script src="optimizer.js"></script>
+  <script src="modules.js"></script>
   <script src="main.js"></script>
 </body>
 </html>
